@@ -556,9 +556,46 @@ namespace LingJing.UI
                 // 名字 + 血条排在立绘右边
                 var col = MakeColumn(card.transform, "Col", 8f, new RectOffset((int)pw + 20, 12, 16, 10), false);
 
+                // —— 品质区分（用户 03:40 提的：精英和 Boss 不能跟普通怪长得一样）——
+                // 手段只有三样，都便宜且不影响布局：卡片底色、名字颜色、左下角一条竖色带 + 右下角角标。
+                if (!isPlayer)
+                {
+                    Color qc = QualityColor(u.quality);
+                    if (u.quality != Quality.Normal)
+                    {
+                        card.color = QualityCardTint(u.quality);
+                        cardBaseColors[u] = card.color;
+
+                        // 左侧竖色带：8px 宽，贴着卡片左边缘（挂在 card 上，绝对定位，不参与竖列布局）
+                        var strip = MakePanel(card.transform, "QualityStrip", qc);
+                        var srt = strip.rectTransform;
+                        srt.anchorMin = new Vector2(0f, 0f);
+                        srt.anchorMax = new Vector2(0f, 1f);
+                        srt.pivot = new Vector2(0f, 0.5f);
+                        srt.sizeDelta = new Vector2(8f, 0f);
+                        srt.anchoredPosition = Vector2.zero;
+                        strip.raycastTarget = false;
+
+                        // 右下角角标：精英 / BOSS（这块原本是空的，战力和血条都在左侧）
+                        var badge = MakePanel(card.transform, "QualityBadge", qc);
+                        var brt = badge.rectTransform;
+                        brt.anchorMin = new Vector2(1f, 0f);
+                        brt.anchorMax = new Vector2(1f, 0f);
+                        brt.pivot = new Vector2(1f, 0f);
+                        brt.sizeDelta = new Vector2(QualityTag(u.quality).Length >= 4 ? 96f : 68f, 26f);
+                        brt.anchoredPosition = new Vector2(-8f, 8f);
+                        badge.raycastTarget = false;
+                        var btxt = MakeText(badge.transform, "T", QualityTag(u.quality), 16,
+                            new Color(0.09f, 0.08f, 0.06f), TextAnchor.MiddleCenter,
+                            new Vector2(0.5f, 0.5f), new Vector2(96f, 26f), new Vector2(0.5f, 0.5f), Vector2.zero);
+                        btxt.fontStyle = FontStyle.Bold;
+                        Stretch(btxt.rectTransform);
+                    }
+                }
+
                 // Boss 名字用金色，一眼能看出这场不是杂兵战（v0.1 验收第 4 条）
                 bool isBoss = !isPlayer && u.quality >= Quality.MiniBoss;
-                Color nameColor = isBoss ? new Color(1f, 0.84f, 0.35f) : Color.white;
+                Color nameColor = !isPlayer ? QualityNameColor(u.quality) : Color.white;
                 MakeText(col, "Name", u.displayName + "   Lv" + u.level, (!isPlayer && enemyTotal >= 6) ? 20 : 24,
                     nameColor, TextAnchor.MiddleLeft, new Vector2(0f, 1f), new Vector2(tw, 30f), new Vector2(0f, 1f), Vector2.zero);
 
@@ -585,7 +622,7 @@ namespace LingJing.UI
                 gle.preferredWidth = 272f;
 
                 MakeText(gRow.transform, "GName", u.displayName + "  " + (isPlayer ? "我" : "敌"), 17,
-                    isPlayer ? new Color(0.6f, 0.9f, 1f) : new Color(1f, 0.7f, 0.6f), TextAnchor.MiddleLeft,
+                    isPlayer ? new Color(0.6f, 0.9f, 1f) : QualityNameColor(u.quality), TextAnchor.MiddleLeft,
                     new Vector2(0f, 1f), new Vector2(200f, 22f), new Vector2(0f, 1f), new Vector2(8f, -4f));
 
                 gaugeTexts[u] = MakeText(gRow.transform, "GVal", "", 16, Color.white, TextAnchor.MiddleRight,
@@ -996,8 +1033,57 @@ namespace LingJing.UI
             }
         }
 
-        static Image MakePanel(Transform parent, string name, Color color)
+        // ------------------------------------------------------------------ 品质配色
+
+        static Color QualityColor(Quality q)
         {
+            switch (q)
+            {
+                case Quality.Elite: return new Color(0.72f, 0.45f, 1f);      // 精英：紫
+                case Quality.MiniBoss: return new Color(1f, 0.80f, 0.30f);   // 小Boss：金
+                case Quality.MidBoss: return new Color(1f, 0.55f, 0.25f);    // 中Boss：橙金
+                case Quality.BigBoss: return new Color(1f, 0.35f, 0.30f);    // 大Boss：红金
+                default: return new Color(0.55f, 0.42f, 0.42f);
+            }
+        }
+
+        static string QualityTag(Quality q)
+        {
+            switch (q)
+            {
+                case Quality.Elite: return "精英";
+                case Quality.MiniBoss: return "小BOSS";
+                case Quality.MidBoss: return "中BOSS";
+                case Quality.BigBoss: return "大BOSS";
+                default: return "";
+            }
+        }
+
+        static Color QualityCardTint(Quality q)
+        {
+            switch (q)
+            {
+                case Quality.Elite: return new Color(0.24f, 0.15f, 0.34f, 1f);
+                case Quality.MiniBoss: return new Color(0.36f, 0.27f, 0.11f, 1f);
+                case Quality.MidBoss: return new Color(0.38f, 0.22f, 0.10f, 1f);
+                case Quality.BigBoss: return new Color(0.40f, 0.14f, 0.14f, 1f);
+                default: return new Color(0.30f, 0.16f, 0.16f, 1f);
+            }
+        }
+
+        static Color QualityNameColor(Quality q)
+        {
+            switch (q)
+            {
+                case Quality.Elite: return new Color(0.82f, 0.70f, 1f);
+                case Quality.MiniBoss: return new Color(1f, 0.90f, 0.55f);
+                case Quality.MidBoss: return new Color(1f, 0.75f, 0.45f);
+                case Quality.BigBoss: return new Color(1f, 0.55f, 0.50f);
+                default: return Color.white;
+            }
+        }
+
+        static Image MakePanel(Transform parent, string name, Color color)        {
             var go = new GameObject(name, typeof(Image));
             go.transform.SetParent(parent, false);
             var img = go.GetComponent<Image>();
