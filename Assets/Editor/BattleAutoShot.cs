@@ -93,10 +93,11 @@ public static class BattleAutoShot
         var sim = hud.Simulator;
         if (sim == null) return;
 
-        // 硬超时：整场 240 秒还没跑完就带着现有截图退出
-        if (Time.realtimeSinceStartup - waitStartedAt > 240f)
+        // 硬超时：整场 420 秒还没跑完就带着现有截图退出（自动战斗一场约 3–4 分钟，240 秒不够）
+        if (Time.realtimeSinceStartup - waitStartedAt > 420f)
         {
-            Debug.LogWarning("[BattleAutoShot] 240 秒超时，直接退出");
+            Debug.LogWarning("[BattleAutoShot] 420 秒超时，直接退出");
+            Debug.Log("[BattleAutoShot] HUD 状态 " + hud.DebugState());
             Capture("99_timeout.png");
             Finish();
             return;
@@ -137,7 +138,28 @@ public static class BattleAutoShot
                 // 让截图先落盘，下一帧再切自动战斗
                 if (sim.awaitingPlayer != null) Debug.Log("[BattleAutoShot] 轮到玩家：" + sim.awaitingPlayer.displayName);
                 hud.autoBattle = true;
-                phase = 2;
+                // 编辑器窗口在后台被限帧时，真实时间跑得比 sim 时间快很多（实测 420 秒才推 37 秒战斗），
+                // 自动阶段开时间加速，让整场在两分钟内能跑完
+                hud.timeScale = 3f;
+                phase = 12;
+                break;
+
+            case 12:
+                // 等真的打出伤害（有飘字）再截，否则截到的是一张「已经打过但什么都没发生」的图
+                if (hud.PopCount >= 3 && sim.round >= 2)
+                {
+                    Capture("03_auto.png");
+                    phase = 13;
+                }
+                break;
+
+            case 13:
+                // 再抓一张「多段伤害同时飘」的画面（裂空斩三段/焚天三段时特别好看）
+                if (hud.PopCount >= 6)
+                {
+                    Capture("03b_hits.png");
+                    phase = 3;
+                }
                 break;
 
             case 2:

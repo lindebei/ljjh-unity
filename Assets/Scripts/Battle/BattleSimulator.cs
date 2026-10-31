@@ -190,7 +190,21 @@ namespace LingJing.Battle
         {
             var actor = awaitingPlayer;
             awaitingPlayer = null;
-            if (actor == null || skill == null || !actor.IsAlive) return;
+            if (actor == null || !actor.IsAlive) return;
+
+            // 兜底：调用方没给技能（灵能不够 / 技能表缺 basic）也要把这一手走完，
+            // 否则行动值不归零、下一拍又轮到同一个单位，战斗会原地死循环（踩过一次，自动战斗整场卡死）。
+            if (skill == null)
+            {
+                skill = actor.def.Skill(SkillType.Basic);
+                if (skill == null)
+                {
+                    Log(actor.displayName + " 没有可用技能，跳过");
+                    actor.gauge = 0f;
+                    AfterAction(actor);
+                    return;
+                }
+            }
 
             playerActionsTotal++;
             playerActionsThisRound++;

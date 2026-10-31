@@ -31,6 +31,7 @@ namespace LingJing.UI
         readonly Dictionary<BattleUnit, Text> hpTexts = new Dictionary<BattleUnit, Text>();
         readonly Dictionary<BattleUnit, RectTransform> gaugeFills = new Dictionary<BattleUnit, RectTransform>();
         readonly Dictionary<BattleUnit, Text> gaugeTexts = new Dictionary<BattleUnit, Text>();
+        readonly Dictionary<BattleUnit, RectTransform> cardRects = new Dictionary<BattleUnit, RectTransform>();
 
         Transform playerRow;
         Transform enemyRow;
@@ -39,18 +40,74 @@ namespace LingJing.UI
         Text spiritText;
         Text potionText;
         Text statusBanner;
+        RectTransform floatLayer;
         Button[] skillButtons = new Button[4];
         Text[] skillLabels = new Text[4];
         Button potionButton;
 
         float tickAccumulator;
         bool finishShown;
+        int popCount;
+
+        /// <summary>飘字累计条数（给自动截图脚本判断「这一帧有数字可看」）。</summary>
+        public int PopCount { get { return popCount; } }
 
         void Start()
         {
+            // 编辑器失焦时默认会把 Update 压到很低频，自动截图脚本就会「跑很久也没推几秒战斗」
+            Application.runInBackground = true;
             font = Font.CreateDynamicFontFromOSFont(new[] { "Microsoft YaHei", "SimHei", "PingFang SC", "Arial" }, 22);
             BuildUi();
             StartBattle();
+            BattleUnit.HpChanged += OnHpChanged;
+        }
+
+        void OnDestroy()
+        {
+            BattleUnit.HpChanged -= OnHpChanged;
+        }
+
+        // ------------------------------------------------------------------ 飘字
+
+        /// <summary>血量变化 → 在对应卡片上方弹一个数字（伤害橙黄、治疗绿、我方受伤红）。</summary>
+        void OnHpChanged(BattleUnit unit, float delta, bool isHeal)
+        {
+            if (floatLayer == null || !cardRects.ContainsKey(unit)) return;
+            if (delta < 0.5f) return;
+
+            var go = new GameObject("Pop_" + unit.id, typeof(Text));
+            go.transform.SetParent(floatLayer, false);
+
+            var text = go.GetComponent<Text>();
+            text.font = font;
+            text.fontSize = isHeal ? 32 : (delta >= unit.maxHp * 0.12f ? 46 : 36);
+            text.fontStyle = FontStyle.Bold;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.raycastTarget = false;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            text.text = (isHeal ? "+" : "-") + Mathf.RoundToInt(delta);
+
+            if (isHeal) text.color = new Color(0.45f, 1f, 0.55f);
+            else if (unit.side == Side.Enemy) text.color = new Color(1f, 0.85f, 0.30f);
+            else text.color = new Color(1f, 0.42f, 0.42f);
+
+            // 深色描边，避免数字压在血条/卡片底色上看不清
+            var outline = go.AddComponent<Outline>();
+            outline.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            outline.effectDistance = new Vector2(2f, -2f);
+
+            var rt = text.rectTransform;
+            rt.sizeDelta = new Vector2(240f, 50f);
+            popCount++;
+
+            // 起点在卡片中下部（血条下方那片空区），往上飘 55px —— 全程留在卡片范围内，
+            // 既不飞进顶部的「灵能/回合/药品」那行，也不跟血条上的 1218/2117 数字打架。
+            // 按 popCount 取模错开纵向位置 + 横向大幅散开，否则治疗和伤害同时跳会叠成「+214422」。
+            Vector3 basePos = cardRects[unit].position;
+            float stagger = (popCount % 3) * 14f;
+            rt.position = basePos + new Vector3(UnityEngine.Random.Range(-110f, 110f), -32f + stagger, 0f);
+
+            go.AddComponent<FloatNumber>().Init(rt, text, 50f, 0.9f);
         }
 
         // ------------------------------------------------------------------ 建界面
@@ -82,9 +139,9 @@ namespace LingJing.UI
                 TextAnchor.MiddleLeft, new Vector2(0f, 1f), new Vector2(280f, 28f), new Vector2(0f, 1f), new Vector2(16f, -14f));
             gaugeColumn = MakeColumn(gaugePanel.transform, "GaugeList", 10f, new RectOffset(14, 14, 52, 14), false);
 
-            // 中：我方（上） / 敌方（下）
-            playerRow = MakeRow(canvasGo.transform, "Players", new Vector2(340f, 120f), new Vector2(1500f, 200f));
-            enemyRow = MakeRow(canvasGo.transform, "Enemies", new Vector2(340f, 690f), new Vector2(1500f, 200f));
+            // 上：敌方（怪物在上，贴顶部）；下：我方（自己的兽在底部，紧贴技能栏）
+            enemyRow = MakeRow(canvasGo.transform, "Enemies", new Vector2(340f, 100f), new Vector2(1500f, 200f));
+            playerRow = MakeRow(canvasGo.transform, "Players", new Vector2(340f, 660f), new Vector2(1500f, 200f));
 
             spiritText = MakeText(canvasGo.transform, "Spirit", "灵能 4/8", 30, new Color(0.5f, 0.85f, 1f), TextAnchor.MiddleLeft,
                 new Vector2(0f, 1f), new Vector2(420f, 40f), new Vector2(0f, 1f), new Vector2(350f, -60f));
@@ -127,6 +184,12 @@ namespace LingJing.UI
             MakeText(logPanel.transform, "LogTitle", "战斗日志", 20, new Color(0.75f, 0.8f, 0.9f), TextAnchor.MiddleLeft,
                 new Vector2(0f, 1f), new Vector2(280f, 28f), new Vector2(0f, 1f), new Vector2(14f, -14f));
             logColumn = MakeColumn(logPanel.transform, "LogLines", 4f, new RectOffset(12, 12, 52, 12), true);
+
+            // 飘字层：最后一个子物体，保证画在所有面板之上（不挡点击）
+            var floatGo = new GameObject("FloatLayer", typeof(RectTransform));
+            floatGo.transform.SetParent(canvasGo.transform, false);
+            floatLayer = floatGo.GetComponent<RectTransform>();
+            Stretch(floatLayer);
 
             EnsureEventSystem();
         }
@@ -203,6 +266,7 @@ namespace LingJing.UI
 
                 var card = MakePanel(row, "Card_" + u.id, isPlayer ? new Color(0.16f, 0.22f, 0.30f, 1f) : new Color(0.30f, 0.16f, 0.16f, 1f));
                 card.rectTransform.sizeDelta = new Vector2(460f, 190f);
+                cardRects[u] = card.rectTransform;
                 var le = card.gameObject.AddComponent<LayoutElement>();
                 le.preferredWidth = 460f;
                 le.preferredHeight = 190f;

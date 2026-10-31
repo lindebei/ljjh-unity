@@ -22,6 +22,13 @@ namespace LingJing.Battle
     /// <summary>战斗中的一只单位。静态数据在 CreatureDefinition，这里只放会变的东西。</summary>
     public class BattleUnit
     {
+        /// <summary>
+        /// 血量变化的全局广播：UI 靠它弹飘字（伤害/治疗）。
+        /// 用静态事件是因为所有伤害都收口在 TakeDamage/Heal 两个方法上，
+        /// 从这里广播比在每个调用点手工记录少漏。
+        /// </summary>
+        public static System.Action<BattleUnit, float, bool> HpChanged;
+
         public CreatureDefinition def;
         public Side side;
         public int level;
@@ -151,6 +158,7 @@ namespace LingJing.Battle
             shield -= absorbed;
             float toHp = raw - absorbed;
             hp = Mathf.Max(0f, hp - toHp);
+            if (toHp > 0f && HpChanged != null) HpChanged(this, toHp, false);
             return toHp;
         }
 
@@ -159,7 +167,9 @@ namespace LingJing.Battle
             if (amount <= 0f || !IsAlive) return 0f;
             float before = hp;
             hp = Mathf.Min(maxHp, hp + amount);
-            return hp - before;
+            float healed = hp - before;
+            if (healed > 0f && HpChanged != null) HpChanged(this, healed, true);
+            return healed;
         }
 
         public float MissingHp { get { return Mathf.Max(0f, maxHp - hp); } }
