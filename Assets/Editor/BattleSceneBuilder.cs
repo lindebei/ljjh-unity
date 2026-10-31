@@ -29,6 +29,18 @@ public static class BattleSceneBuilder
             new[] { "en_firetiger", "en_graywolf", "en_bonefish" });
     }
 
+    const string BossScenePath = "Assets/Scenes/BattleBoss.unity";
+
+    [MenuItem("灵境/生成 Boss 演示场景 (2 普 + 1 小Boss)")]
+    public static void BuildBossScene()
+    {
+        // Boss 演示：用来看 Boss 名字金色标记与「大一号」的观感（v0.1 验收第 4 条）
+        // 单波放一起，否则 Boss 要等第一波清完才入场，截图里看不到金色名字
+        BuildInto(BossScenePath,
+            new[] { "en_bonefish", "en_stonelizard", "en_jelly" },
+            null);
+    }
+
     const string EquipScenePath = "Assets/Scenes/EquipScreen.unity";
 
     [MenuItem("灵境/生成 换装界面场景")]

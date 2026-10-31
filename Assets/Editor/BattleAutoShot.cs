@@ -23,6 +23,7 @@ public static class BattleAutoShot
     static int waitFrames;
     static int exitCountdown;
     static bool equipShotTaken;
+    static bool forceFormationShot;
     static double startedAt;
     static float waitStartedAt;
 
@@ -49,11 +50,29 @@ public static class BattleAutoShot
         Run();
     }
 
+    public static void RunBoss()
+    {
+        ScenePath = "Assets/Scenes/BattleBoss.unity";
+        Run();
+    }
+
+    /// <summary>只截编队面板：故意不跳过编队，所以进 Play 后停在这一屏，截完就退。</summary>
+    public static void RunFormation()
+    {
+        forceFormationShot = true;
+        ScenePath = "Assets/Scenes/BattlePrototype.unity";
+        Run();
+    }
+
 public static void Run()
     {
         Directory.CreateDirectory(OutDir);
         EditorPrefs.SetBool(PendingKey, true);
         if (File.Exists(ScenePath)) EditorSceneManager.OpenScene(ScenePath);
+
+        // 编队面板会挡住战斗画面，自动截图必须跳过它（跳过时默认编队仍然是水/火/风）
+        var sceneHud = Object.FindObjectOfType<LingJing.UI.BattleHud>();
+        if (sceneHud != null && !forceFormationShot) sceneHud.skipFormation = true;
 
         EditorApplication.update -= Tick;
         EditorApplication.update += Tick;
@@ -125,7 +144,26 @@ public static void Run()
         }
 
         var sim = hud.Simulator;
-        if (sim == null) return;
+        if (sim == null)
+        {
+            // 编队面板：还没点「开战」，所以没有 BattleSimulator。等界面搭完截一张就退。
+            if (frames >= 90 && !equipShotTaken)
+            {
+                Capture("formation.png");
+                equipShotTaken = true;
+                waitFrames = 0;
+            }
+            if (equipShotTaken)
+            {
+                waitFrames++;
+                if (File.Exists(OutDir + "/formation.png") || waitFrames > 240)
+                {
+                    Debug.Log("[BattleAutoShot] 编队截图落盘：" + File.Exists(OutDir + "/formation.png"));
+                    exitCountdown = 30;
+                }
+            }
+            return;
+        }
 
         // 硬超时：整场 420 秒还没跑完就带着现有截图退出（自动战斗一场约 3–4 分钟，240 秒不够）
         if (Time.realtimeSinceStartup - waitStartedAt > 420f)

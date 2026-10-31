@@ -25,6 +25,9 @@ namespace LingJing.UI
         [Tooltip("是否给三只兽穿满配五件。装备界面还没做，先用这个开关对比战力与胜率")]
         public bool equipFullSet = true;
 
+        [Tooltip("跳过编队面板直接开打（自动截图/批测用），默认编队为水/火/风")]
+        public bool skipFormation;
+
         BattleSimulator sim;
 
         /// <summary>给编辑器脚本（自动截图/批量测试）读状态用。</summary>
@@ -47,6 +50,7 @@ namespace LingJing.UI
         Transform enemyRow;
         Transform gaugeColumn;
         Transform logColumn;
+        RectTransform canvasRect;
         Text spiritText;
         Text potionText;
         Text statusBanner;
@@ -54,6 +58,11 @@ namespace LingJing.UI
         Button[] skillButtons = new Button[4];
         Text[] skillLabels = new Text[4];
         Button potionButton;
+        Button autoButton;                 // 自动战斗：等级 <15 时置灰（设计文档「自动战斗需等级 ≥15」）
+        Button startButton;                // 编队面板的「开战」
+        GameObject formationPanel;         // 开战前的编队面板（4 选 3，开战后不再给入口）
+        readonly List<string> picked = new List<string>();   // 编队选中的 3 只
+        bool battleStarted;
 
         float tickAccumulator;
         bool finishShown;
@@ -68,7 +77,16 @@ namespace LingJing.UI
             Application.runInBackground = true;
             font = Font.CreateDynamicFontFromOSFont(new[] { "Microsoft YaHei", "SimHei", "PingFang SC", "Arial" }, 22);
             BuildUi();
-            StartBattle();
+            // v0.1 规则：编队 4 选 3，开战前选、开战后不可更改 —— 所以先出编队面板，由「开战」触发 StartBattle()
+            if (skipFormation)
+            {
+                PrefillDefaultFormation();
+                StartBattle();
+            }
+            else
+            {
+                BuildFormationPanel();
+            }
             BattleUnit.HpChanged += OnHpChanged;
         }
 
@@ -133,6 +151,7 @@ namespace LingJing.UI
             canvasGo.transform.SetParent(transform, false);
             var canvas = canvasGo.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvasRect = canvasGo.GetComponent<RectTransform>();
             var scaler = canvasGo.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080);
@@ -200,6 +219,16 @@ namespace LingJing.UI
             potionButton = MakeButton(bar.transform, "PotionBtn", "药品\n(35% 血)", new Vector2(660f, 0f), new Vector2(180f, 130f));
             potionButton.onClick.AddListener(OnPotionClicked);
 
+            // 自动战斗：设计文档要求「等级 ≥15 才解锁」，低于 15 级置灰并写明原因
+            autoButton = MakeButton(canvasGo.transform, "AutoBtn", "", new Vector2(0f, 0f), new Vector2(240f, 56f));
+            var abrt = autoButton.GetComponent<RectTransform>();
+            abrt.anchorMin = new Vector2(0f, 1f);      // 顶栏左侧区（灵能、药品右边），别压到右边的日志面板
+            abrt.anchorMax = new Vector2(0f, 1f);
+            abrt.pivot = new Vector2(0f, 1f);
+            abrt.anchoredPosition = new Vector2(1090f, -46f);
+            autoButton.onClick.AddListener(OnAutoClicked);
+            UpdateAutoButton();
+
             // 右：日志
             var logPanel = MakePanel(canvasGo.transform, "LogPanel", new Color(0.09f, 0.10f, 0.12f, 1f));
             var lp = logPanel.rectTransform;
@@ -240,9 +269,8 @@ namespace LingJing.UI
             sim = new BattleSimulator(cfg) { interactive = true, verbose = true };
             int[] free = { 23, 23, 23, 23, 23, 23 };
 
-            string[] players = { "beast_water", "beast_fire", "beast_wind", "beast_earth" };
-            // v0.1 规则：4 选 3、编队不可改——这里固定带水/火/风，土灵留给玩家以后自己换
-            for (int i = 0; i < 3; i++)
+            string[] players = picked.ToArray();
+            for (int i = 0; i < players.Length; i++)
             {
                 var def = BattleDatabase.GetCreature(players[i]);
                 if (def == null) { Debug.LogError("[BattleHud] 缺少 " + players[i]); return; }
@@ -275,6 +303,175 @@ namespace LingJing.UI
             BuildUnitWidgets();
             RefreshAll();
             PrimeSkillLabels();
+
+            // 开战即锁：编队面板关掉，之后再没有换人的入口（v0.1「编队 4 选 3 不可改」）
+            battleStarted = true;
+            if (formationPanel != null) formationPanel.SetActive(false);
+            UpdateAutoButton();
+        }
+
+        // ------------------------------------------------------------------ 自动战斗
+
+        static readonly int AutoBattleUnlockLevel = 15;
+
+        void UpdateAutoButton()
+        {
+            if (autoButton == null) return;
+            bool unlocked = playerLevel >= AutoBattleUnlockLevel;
+            autoButton.interactable = unlocked && battleStarted;
+            var lbl = autoButton.GetComponentInChildren<Text>();
+            if (lbl == null) return;
+            if (!unlocked) { lbl.text = "自动战斗（需 Lv" + AutoBattleUnlockLevel + "）"; lbl.color = new Color(0.55f, 0.6f, 0.66f); }
+            else { lbl.text = autoBattle ? "自动战斗：开" : "自动战斗：关"; lbl.color = Color.white; }
+        }
+
+        void OnAutoClicked()
+        {
+            if (playerLevel < AutoBattleUnlockLevel) return;
+            autoBattle = !autoBattle;
+            Flash(autoBattle ? "自动战斗已开启" : "自动战斗已关闭");
+            UpdateAutoButton();
+        }
+
+        // ------------------------------------------------------------------ 编队（4 选 3）
+
+        static readonly string[] RosterIds = { "beast_water", "beast_fire", "beast_wind", "beast_earth" };
+        Text formationTip;
+
+        void PrefillDefaultFormation()
+        {
+            picked.Clear();
+            picked.Add(RosterIds[0]);
+            picked.Add(RosterIds[1]);
+            picked.Add(RosterIds[2]);
+        }
+
+        void BuildFormationPanel()
+        {
+            var panel = MakePanel(canvasRect, "Formation", new Color(0.05f, 0.06f, 0.09f, 0.985f));
+            Stretch(panel.rectTransform);
+            formationPanel = panel.gameObject;
+
+            MakeText(panel.transform, "Title", "编队：4 只里选 3 只（开战后不可更换）", 38,
+                new Color(1f, 0.92f, 0.6f), TextAnchor.MiddleCenter,
+                new Vector2(0.5f, 1f), new Vector2(1400f, 56f), new Vector2(0.5f, 1f), new Vector2(0f, -90f));
+
+            for (int i = 0; i < RosterIds.Length; i++)
+            {
+                int idx = i;
+                var def = BattleDatabase.GetCreature(RosterIds[i]);
+                string nm = def != null ? def.displayName : RosterIds[i];
+
+                float x = -570f + i * 380f;
+                var card = MakePanel(panel.transform, "Slot_" + i, new Color(0.14f, 0.18f, 0.24f, 1f));
+                var crt = card.rectTransform;
+                crt.anchorMin = new Vector2(0.5f, 0.5f);
+                crt.anchorMax = new Vector2(0.5f, 0.5f);
+                crt.pivot = new Vector2(0.5f, 0.5f);
+                crt.sizeDelta = new Vector2(340f, 480f);
+                crt.anchoredPosition = new Vector2(x, 40f);
+
+                // 立绘：等比放进 260×260 的框
+                var portrait = new GameObject("Portrait", typeof(Image)).GetComponent<Image>();
+                portrait.transform.SetParent(card.transform, false);
+                var sprite = LoadPortrait(RosterIds[i]);
+                portrait.sprite = sprite;
+                portrait.preserveAspect = true;
+                portrait.raycastTarget = false;
+                portrait.color = sprite != null ? Color.white : new Color(1f, 1f, 1f, 0.05f);
+                var prt = portrait.rectTransform;
+                prt.anchorMin = new Vector2(0.5f, 1f);
+                prt.anchorMax = new Vector2(0.5f, 1f);
+                prt.pivot = new Vector2(0.5f, 1f);
+                prt.sizeDelta = new Vector2(260f, 260f);
+                prt.anchoredPosition = new Vector2(0f, -30f);
+
+                MakeText(card.transform, "Name", nm, 26, Color.white, TextAnchor.MiddleCenter,
+                    new Vector2(0.5f, 1f), new Vector2(300f, 34f), new Vector2(0.5f, 1f), new Vector2(0f, -300f));
+
+                // 战力按「换装界面存了什么就穿什么」算，跟开打后卡片上的数字对得上
+                EquipmentLoadout gear = EquipmentPresets.Get(RosterIds[i]);
+                bool hasGear = gear != null && !gear.IsEmpty();
+                float power = PowerWithGear(def, hasGear ? gear : null);
+                MakeText(card.transform, "Power", "战力 " + Mathf.RoundToInt(power), 22,
+                    new Color(0.72f, 0.82f, 0.95f), TextAnchor.MiddleCenter,
+                    new Vector2(0.5f, 1f), new Vector2(300f, 30f), new Vector2(0.5f, 1f), new Vector2(0f, -336f));
+                MakeText(card.transform, "GearTag", hasGear ? "已装备" : "（裸装）", 18,
+                    hasGear ? new Color(0.55f, 0.9f, 0.6f) : new Color(0.75f, 0.7f, 0.7f), TextAnchor.MiddleCenter,
+                    new Vector2(0.5f, 1f), new Vector2(300f, 26f), new Vector2(0.5f, 1f), new Vector2(0f, -366f));
+
+                // 整张卡就是一个按钮，点一下选中/取消
+                var btn = card.gameObject.AddComponent<Button>();
+                btn.targetGraphic = card;
+                var colors = btn.colors;
+                colors.normalColor = Color.white;
+                colors.highlightedColor = new Color(1f, 1f, 1f, 1f);
+                colors.pressedColor = new Color(0.85f, 0.85f, 0.85f, 1f);
+                colors.selectedColor = Color.white;
+                colors.disabledColor = Color.white;
+                btn.colors = colors;
+                btn.onClick.AddListener(() => OnRosterClicked(idx));
+                rosterCards.Add(card);
+            }
+
+            formationTip = MakeText(panel.transform, "Tip", "", 28, new Color(0.8f, 0.86f, 0.95f), TextAnchor.MiddleCenter,
+                new Vector2(0.5f, 0f), new Vector2(900f, 40f), new Vector2(0.5f, 0f), new Vector2(0f, 262f));
+
+            var start = MakeButton(panel.transform, "StartBtn", "开战", new Vector2(0f, -360f), new Vector2(340f, 96f));
+            startButton = start;
+            start.onClick.AddListener(OnStartClicked);
+
+            RefreshFormation();
+        }
+
+        readonly List<Image> rosterCards = new List<Image>();
+
+        void OnRosterClicked(int i)
+        {
+            string id = RosterIds[i];
+            if (picked.Contains(id)) picked.Remove(id);
+            else if (picked.Count < 3) picked.Add(id);
+            RefreshFormation();
+        }
+
+        void RefreshFormation()
+        {
+            for (int i = 0; i < rosterCards.Count; i++)
+            {
+                bool on = picked.Contains(RosterIds[i]);
+                rosterCards[i].color = on ? new Color(0.24f, 0.38f, 0.30f, 1f) : new Color(0.14f, 0.18f, 0.24f, 1f);
+                var tag = rosterCards[i].transform.Find("GearTag");
+                if (tag != null)
+                {
+                    var t = tag.GetComponent<Text>();
+                    t.text = on ? "✔ 已选" : (picked.Count >= 3 ? "已满 3 只" : "点击选择");
+                    t.color = on ? new Color(0.55f, 1f, 0.6f) : new Color(0.7f, 0.74f, 0.8f);
+                }
+            }
+
+            if (formationTip != null) formationTip.text = string.Format("已选 {0} / 3", picked.Count);
+            if (startButton != null)
+            {
+                startButton.interactable = picked.Count == 3;
+                var lbl = startButton.GetComponentInChildren<Text>();
+                if (lbl != null) lbl.color = picked.Count == 3 ? Color.white : new Color(0.55f, 0.6f, 0.66f);
+            }
+        }
+
+        void OnStartClicked()
+        {
+            if (picked.Count != 3 || battleStarted) return;
+            StartBattle();
+        }
+
+        float PowerWithGear(CreatureDefinition def, EquipmentLoadout loadout)
+        {
+            if (def == null) return 0f;
+            int[] free = { 23, 23, 23, 23, 23, 23 };
+            var raw = BattleFormulas.PlayerStats(def.baseStats, playerLevel, def.potentials, free);
+            var final = loadout != null ? loadout.Apply(raw) : raw;
+            float gearPower = loadout != null ? loadout.Power() : 0f;
+            return BattleFormulas.Power(final, playerLevel, gearPower);
         }
 
         void AddEnemyWave(int band, string[] ids)
@@ -358,8 +555,12 @@ namespace LingJing.UI
 
                 // 名字 + 血条排在立绘右边
                 var col = MakeColumn(card.transform, "Col", 8f, new RectOffset((int)pw + 20, 12, 16, 10), false);
+
+                // Boss 名字用金色，一眼能看出这场不是杂兵战（v0.1 验收第 4 条）
+                bool isBoss = !isPlayer && u.quality >= Quality.MiniBoss;
+                Color nameColor = isBoss ? new Color(1f, 0.84f, 0.35f) : Color.white;
                 MakeText(col, "Name", u.displayName + "   Lv" + u.level, (!isPlayer && enemyTotal >= 6) ? 20 : 24,
-                    Color.white, TextAnchor.MiddleLeft, new Vector2(0f, 1f), new Vector2(tw, 30f), new Vector2(0f, 1f), Vector2.zero);
+                    nameColor, TextAnchor.MiddleLeft, new Vector2(0f, 1f), new Vector2(tw, 30f), new Vector2(0f, 1f), Vector2.zero);
 
                 // 卡片宽 460，立绘占左侧 170（150 图 + 10 边距 + 10 间隙），文字区只剩 278 —— 这里的宽度必须跟着改，
                 // 不然血条会伸出卡片右边（childControlWidth=false 时布局不会帮你压窄）
@@ -405,7 +606,7 @@ namespace LingJing.UI
 
         void Update()
         {
-            if (sim == null) return;
+            if (sim == null || !battleStarted) return;
 
             if (sim.IsBattleOver)
             {
