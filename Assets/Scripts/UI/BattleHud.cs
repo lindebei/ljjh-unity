@@ -32,6 +32,9 @@ namespace LingJing.UI
         readonly Dictionary<BattleUnit, RectTransform> gaugeFills = new Dictionary<BattleUnit, RectTransform>();
         readonly Dictionary<BattleUnit, Text> gaugeTexts = new Dictionary<BattleUnit, Text>();
         readonly Dictionary<BattleUnit, RectTransform> cardRects = new Dictionary<BattleUnit, RectTransform>();
+        readonly Dictionary<BattleUnit, Image> cardImages = new Dictionary<BattleUnit, Image>();
+        readonly Dictionary<BattleUnit, Color> cardBaseColors = new Dictionary<BattleUnit, Color>();
+        readonly Dictionary<BattleUnit, Image> portraits = new Dictionary<BattleUnit, Image>();
 
         Transform playerRow;
         Transform enemyRow;
@@ -91,6 +94,11 @@ namespace LingJing.UI
             else if (unit.side == Side.Enemy) text.color = new Color(1f, 0.85f, 0.30f);
             else text.color = new Color(1f, 0.42f, 0.42f);
 
+            // 受击/受治疗：卡片本身闪一下（比只有数字更容易注意到「谁挨打了」）
+            // 闪光色要偏暗——直接用纯白会把整张卡（含立绘）糊成一块白板
+            if (isHeal) StartCoroutine(FlashCard(unit, new Color(0.30f, 0.52f, 0.36f), 0.28f));
+            else StartCoroutine(FlashCard(unit, unit.side == Side.Enemy ? new Color(0.52f, 0.60f, 0.70f) : new Color(0.58f, 0.26f, 0.26f), 0.22f));
+
             // 深色描边，避免数字压在血条/卡片底色上看不清
             var outline = go.AddComponent<Outline>();
             outline.effectColor = new Color(0f, 0f, 0f, 0.85f);
@@ -125,6 +133,19 @@ namespace LingJing.UI
 
             var bg = MakePanel(canvasGo.transform, "Bg", new Color(0.07f, 0.08f, 0.10f, 1f));
             Stretch(bg.rectTransform);
+
+            // 场景背景：上暗下亮的竖向渐变 + 中间一团冷色光晕，卡片才有「站在场地里」的感觉
+            var sky = MakePanel(canvasGo.transform, "Sky", Color.white);
+            sky.sprite = MakeGradientSprite(new Color(0.05f, 0.06f, 0.10f), new Color(0.13f, 0.16f, 0.22f));
+            Stretch(sky.rectTransform);
+
+            var glow = MakePanel(canvasGo.transform, "ArenaGlow", Color.white);
+            glow.sprite = MakeRadialSprite(new Color(0.32f, 0.42f, 0.62f, 0.42f), new Color(0f, 0f, 0f, 0f));
+            var glr = glow.rectTransform;
+            glr.anchorMin = new Vector2(0.5f, 0.5f);
+            glr.anchorMax = new Vector2(0.5f, 0.5f);
+            glr.sizeDelta = new Vector2(1500f, 760f);
+            glr.anchoredPosition = new Vector2(80f, 40f);
 
             // 左：行动条面板（贴左边，宽 300）
             var gaugePanel = MakePanel(canvasGo.transform, "GaugePanel", new Color(0.11f, 0.12f, 0.15f, 1f));
@@ -230,6 +251,7 @@ namespace LingJing.UI
             }
 
             sim.Begin();
+            sim.ActionStarted += OnActionStarted;
             BuildUnitWidgets();
             RefreshAll();
             PrimeSkillLabels();
@@ -267,18 +289,38 @@ namespace LingJing.UI
                 var card = MakePanel(row, "Card_" + u.id, isPlayer ? new Color(0.16f, 0.22f, 0.30f, 1f) : new Color(0.30f, 0.16f, 0.16f, 1f));
                 card.rectTransform.sizeDelta = new Vector2(460f, 190f);
                 cardRects[u] = card.rectTransform;
+                cardImages[u] = card;
+                cardBaseColors[u] = card.color;
                 var le = card.gameObject.AddComponent<LayoutElement>();
                 le.preferredWidth = 460f;
                 le.preferredHeight = 190f;
 
-                var col = MakeColumn(card.transform, "Col", 6f, new RectOffset(12, 12, 10, 10), false);
-                MakeText(col, "Name", u.displayName + "   Lv" + u.level, 24, Color.white, TextAnchor.MiddleLeft,
-                    new Vector2(0f, 1f), new Vector2(436f, 30f), new Vector2(0f, 1f), Vector2.zero);
+                // 立绘：卡片左侧 150x150，等比缩放（没有图就只留空白，不影响其它布局）
+                var portrait = new GameObject("Portrait", typeof(Image)).GetComponent<Image>();
+                portrait.transform.SetParent(card.transform, false);
+                portrait.sprite = LoadPortrait(u.id);
+                portrait.preserveAspect = true;
+                portrait.raycastTarget = false;
+                portrait.enabled = portrait.sprite != null;
+                var prt = portrait.rectTransform;
+                prt.anchorMin = new Vector2(0f, 0f);
+                prt.anchorMax = new Vector2(0f, 0f);
+                prt.pivot = new Vector2(0f, 0f);
+                prt.sizeDelta = new Vector2(150f, 160f);
+                prt.anchoredPosition = new Vector2(10f, 14f);
+                portraits[u] = portrait;
 
-                var hpBar = MakeBar(col, "Hp", new Color(0.85f, 0.25f, 0.25f), 436f, 28f);
+                // 名字 + 血条排在立绘右边
+                var col = MakeColumn(card.transform, "Col", 8f, new RectOffset(170, 12, 16, 10), false);
+                MakeText(col, "Name", u.displayName + "   Lv" + u.level, 24, Color.white, TextAnchor.MiddleLeft,
+                    new Vector2(0f, 1f), new Vector2(278f, 30f), new Vector2(0f, 1f), Vector2.zero);
+
+                // 卡片宽 460，立绘占左侧 170（150 图 + 10 边距 + 10 间隙），文字区只剩 278 —— 这里的宽度必须跟着改，
+                // 不然血条会伸出卡片右边（childControlWidth=false 时布局不会帮你压窄）
+                var hpBar = MakeBar(col, "Hp", new Color(0.85f, 0.25f, 0.25f), 278f, 26f);
                 hpFills[u] = hpBar.Item2;
-                hpTexts[u] = MakeText(hpBar.Item1, "HpText", "", 18, Color.white, TextAnchor.MiddleCenter,
-                    new Vector2(0f, 0f), new Vector2(436f, 28f), new Vector2(0f, 0f), Vector2.zero);
+                hpTexts[u] = MakeText(hpBar.Item1, "HpText", "", 17, Color.white, TextAnchor.MiddleCenter,
+                    new Vector2(0f, 0f), new Vector2(278f, 26f), new Vector2(0f, 0f), Vector2.zero);
                 Stretch(hpTexts[u].rectTransform);
 
                 // 行动条（左侧竖排）
@@ -342,6 +384,91 @@ namespace LingJing.UI
             }
 
             RefreshAll();
+        }
+
+        // ------------------------------------------------------------------ 表现层（出手/命中）
+
+        /// <summary>
+        /// 有人出手：在该单位头顶弹一条「名字 · 技能名」（属性色），并让他的卡片弹一下。
+        /// v0.1 不做骨骼动画，这三件事（技能名 + 出手方弹动 + 受击方闪白）就够读懂了。
+        /// </summary>
+        void OnActionStarted(BattleUnit actor, SkillDefinition skill)
+        {
+            if (actor == null || skill == null) return;
+            var color = ElementColor(skill.element);
+            StartCoroutine(ShowSkillName(actor, skill, color));
+            StartCoroutine(PulseCard(actor, 1.08f, 0.22f));
+        }
+
+        System.Collections.IEnumerator ShowSkillName(BattleUnit actor, SkillDefinition skill, Color color)
+        {
+            float life = 0.9f;
+            var go = new GameObject("SkillName", typeof(Text));
+            go.transform.SetParent(floatLayer, false);
+            var t = go.GetComponent<Text>();
+            t.font = font;
+            t.fontSize = actor.side == Side.Player ? 40 : 34;
+            t.fontStyle = FontStyle.Bold;
+            t.alignment = TextAnchor.MiddleCenter;
+            t.raycastTarget = false;
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            t.text = actor.displayName + " · " + skill.displayName;
+            t.color = color;
+            var outline = go.AddComponent<Outline>();
+            outline.effectColor = new Color(0f, 0f, 0f, 0.9f);
+            outline.effectDistance = new Vector2(2f, -2f);
+
+            var rt = t.rectTransform;
+            rt.sizeDelta = new Vector2(600f, 56f);
+            // 名字挂在出手者卡片正上方（我方在上方会压到敌方行，所以往自己那侧偏）
+            Vector3 basePos = cardRects[actor].position;
+            rt.position = basePos + new Vector3(0f, actor.side == Side.Player ? 108f : -108f, 0f);
+
+            float el = 0f;
+            while (el < life && t != null)
+            {
+                el += Time.deltaTime;
+                float k = el / life;
+                var c = color;
+                c.a = k < 0.6f ? 1f : Mathf.Lerp(1f, 0f, (k - 0.6f) / 0.4f);
+                t.color = c;
+                rt.position = basePos + new Vector3(0f, (actor.side == Side.Player ? 108f : -108f) + k * (actor.side == Side.Player ? 26f : -26f), 0f);
+                yield return null;
+            }
+            if (go != null) Destroy(go);
+        }
+
+        System.Collections.IEnumerator PulseCard(BattleUnit unit, float scale, float duration)
+        {
+            var rt = cardRects.ContainsKey(unit) ? cardRects[unit] : null;
+            if (rt == null) yield break;
+            float el = 0f;
+            while (el < duration && rt != null)
+            {
+                el += Time.deltaTime;
+                float k = el / duration;
+                // 0→1 先放大再回落
+                float s = 1f + (scale - 1f) * Mathf.Sin(k * Mathf.PI);
+                rt.localScale = new Vector3(s, s, 1f);
+                yield return null;
+            }
+            if (rt != null) rt.localScale = Vector3.one;
+        }
+
+        /// <summary>受击/受治疗：卡片底色闪一下再回到原色。</summary>
+        System.Collections.IEnumerator FlashCard(BattleUnit unit, Color flash, float duration)
+        {
+            if (!cardImages.ContainsKey(unit)) yield break;
+            var img = cardImages[unit];
+            var baseColor = cardBaseColors[unit];
+            float el = 0f;
+            while (el < duration && img != null)
+            {
+                el += Time.deltaTime;
+                img.color = Color.Lerp(flash, baseColor, el / duration);
+                yield return null;
+            }
+            if (img != null) img.color = baseColor;
         }
 
         // ------------------------------------------------------------------ 交互
@@ -433,6 +560,11 @@ namespace LingJing.UI
                     gaugeFills[u].anchorMax = new Vector2(Mathf.Clamp01(u.gauge / sim.config.gaugeThreshold), 1f);
                     gaugeTexts[u].text = u.IsAlive ? u.gauge.ToString("F0") : "倒下";
                 }
+                if (portraits.ContainsKey(u) && portraits[u] != null)
+                {
+                    // 倒下的立绘压暗，别让它在卡片里看着还活着
+                    portraits[u].color = u.IsAlive ? Color.white : new Color(0.35f, 0.35f, 0.40f, 0.55f);
+                }
             }
 
             spiritText.text = string.Format("灵能 {0}/{1}     回合 {2}", sim.spirit, sim.config.spiritMax, sim.round);
@@ -502,6 +634,58 @@ namespace LingJing.UI
         }
 
         // ------------------------------------------------------------------ UI 小工具
+
+        /// <summary>运行时生成一张竖向渐变 sprite（2x128 就够，反正被拉伸）。</summary>
+        static Sprite MakeGradientSprite(Color top, Color bottom)
+        {
+            const int h = 128;
+            var tex = new Texture2D(2, h, TextureFormat.RGBA32, false);
+            tex.wrapMode = TextureWrapMode.Clamp;
+            for (int y = 0; y < h; y++)
+            {
+                var c = Color.Lerp(bottom, top, y / (float)(h - 1));
+                tex.SetPixel(0, y, c);
+                tex.SetPixel(1, y, c);
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, 2, h), new Vector2(0.5f, 0.5f), 100f);
+        }
+
+        /// <summary>径向渐变（中心实、边缘透明），用来画场地光晕。</summary>
+        static Sprite MakeRadialSprite(Color center, Color edge, int size = 128)
+        {
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            tex.wrapMode = TextureWrapMode.Clamp;
+            float r = size * 0.5f;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float d = Vector2.Distance(new Vector2(x, y), new Vector2(r, r)) / r;
+                    tex.SetPixel(x, y, Color.Lerp(center, edge, Mathf.Clamp01(d)));
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+        }
+
+        /// <summary>立绘从 Resources 里按 id 取，取不到就返回 null（卡片照样能用）。</summary>
+        static Sprite LoadPortrait(string id)
+        {
+            var s = Resources.Load<Sprite>("Art/Creatures/" + id);
+            return s;
+        }
+
+        static Color ElementColor(Element e)
+        {
+            switch (e)
+            {
+                case Element.Water: return new Color(0.42f, 0.78f, 1f);
+                case Element.Fire: return new Color(1f, 0.62f, 0.32f);
+                case Element.Wind: return new Color(0.55f, 1f, 0.85f);
+                default: return new Color(1f, 0.85f, 0.45f);
+            }
+        }
 
         static Image MakePanel(Transform parent, string name, Color color)
         {

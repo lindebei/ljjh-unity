@@ -541,9 +541,14 @@ namespace LingJing.Battle
 
         // ------------------------------------------------------------------ 结算一个技能
 
+        /// <summary>有人开始放技能时广播（UI 用来播技能名横幅、让出手者的卡抖动一下）。</summary>
+        public event System.Action<BattleUnit, SkillDefinition> ActionStarted;
+
         public void Cast(BattleUnit actor, SkillDefinition skill, List<BattleUnit> targets)
         {
             if (skill == null) return;
+
+            if (ActionStarted != null) ActionStarted(actor, skill);
 
             // 灵能
             if (skill.spiritCost < 0) spirit = Mathf.Min(config.spiritMax, spirit + 1);
