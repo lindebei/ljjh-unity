@@ -995,7 +995,8 @@ namespace LingJing.UI
             menuBackButton.gameObject.SetActive(true);
         }
 
-        void BackToMenu()
+        /// <summary>结算后回主菜单（也让自动截图脚本能直接调来验证链路）。</summary>
+        public void BackToMenu()
         {
             const string menuScene = "MainMenu";
             if (Application.CanStreamedLevelBeLoaded(menuScene)) UnityEngine.SceneManagement.SceneManager.LoadScene(menuScene);

@@ -128,9 +128,14 @@ public static void Run()
         }
 
         var hud = Hud();
-        // 换装界面没有 BattleHud：等界面搭完（90 帧）截一张，确认文件真的落盘再退
+        // 换装界面（以及任何没有 BattleHud 的场景，比如切回主菜单之后）走这条分支
         if (hud == null)
         {
+            if (!equipShotTaken)
+            {
+                Debug.Log("[BattleAutoShot] 当前场景=" + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name
+                    + "（没有 BattleHud，按菜单/换装页处理） frame=" + frames);
+            }
             if (frames >= 90 && !equipShotTaken)
             {
                 Capture("equip_01.png");
@@ -253,7 +258,31 @@ public static void Run()
                 if (sim.IsBattleOver)
                 {
                     Capture("04_result.png");
-                    exitCountdown = 30; // 留 30 帧让 PNG 落盘，再退出
+                    phase = 30;
+                }
+                break;
+
+            case 30:
+                // 等结算图落盘，然后验证「回主菜单」这条链路真的能切场景
+                waitFrames++;
+                if (waitFrames > 40)
+                {
+                    waitFrames = 0;
+                    Debug.Log("[BattleAutoShot] 结算前场景=" + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+                    hud.BackToMenu();
+                    phase = 31;
+                }
+                break;
+
+            case 31:
+                waitFrames++;
+                if (waitFrames > 30)
+                {
+                    var active = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+                    Debug.Log("[BattleAutoShot] 点回主菜单后场景=" + active + "（期望 MainMenu）");
+                    Capture("05_back_to_menu.png");
+                    exitCountdown = 40;
+                    phase = 32;
                 }
                 break;
         }
