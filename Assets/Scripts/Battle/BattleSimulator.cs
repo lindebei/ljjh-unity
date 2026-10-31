@@ -38,8 +38,8 @@ namespace LingJing.Battle
         public BattleSimulator(BattleConfig config, int seed = 20261031)
         {
             this.config = config;
-            this.calc = new DamageCalculator(config);
-            this.rng = new System.Random(seed);
+            this.rng = new System.Random(seed);           // 必须先建 rng，下面 calc 要用它
+            this.calc = new DamageCalculator(config, this.rng);
         }
 
         // ------------------------------------------------------------------ 建队
@@ -358,6 +358,16 @@ namespace LingJing.Battle
         }
 
         // ------------------------------------------------------------------ 玩家侧
+
+        /// <summary>自动战斗/UI 共用：现在该不该喝药（有人低于阈值且还有药）。</summary>
+        public bool ShouldUsePotion()
+        {
+            if (potions <= 0) return false;
+            var ps = Alive(Side.Player);
+            for (int i = 0; i < ps.Count; i++)
+                if (ps[i].HpPercent < config.potionTriggerHpPercent) return true;
+            return false;
+        }
 
         bool TryUsePotion(BattleUnit actor)
         {

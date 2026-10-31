@@ -10,10 +10,14 @@ namespace LingJing.Battle
     public class DamageCalculator
     {
         readonly BattleConfig config;
+        readonly System.Random rng;
 
-        public DamageCalculator(BattleConfig config)
+        public DamageCalculator(BattleConfig config, System.Random rng = null)
         {
             this.config = config;
+            // 随机模式必须用注入的种子随机源：用 UnityEngine.Random 的话同一 seed 也复现不了，
+            // 批量对账和「复现某一场」都会失效。
+            this.rng = rng ?? new System.Random(20261031);
         }
 
         public float ElementMultiplier(Element attacker, Element defender)
@@ -38,9 +42,10 @@ namespace LingJing.Battle
 
             if (config.useExpectedValue) return dmg * hit;
 
-            // 随机模式：先判命中，再叠浮动
-            if (Random.value > hit) return 0f;
-            float v = 1f + Random.Range(-config.damageVariance, config.damageVariance);
+            // 随机模式：先判命中，再叠浮动（用注入的 rng，不用全局 UnityEngine.Random）
+            if (rng.NextDouble() > hit) return 0f;
+            double span = config.damageVariance * 2.0;
+            float v = 1f + (float)(rng.NextDouble() * span - config.damageVariance);
             return dmg * v;
         }
 

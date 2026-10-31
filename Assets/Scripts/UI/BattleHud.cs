@@ -363,8 +363,10 @@ namespace LingJing.UI
             // 否则 autoBattle 一旦打开就会永远卡在第一个玩家回合上（踩过一次）。
             if (autoBattle && sim.awaitingPlayer != null)
             {
-                var auto = sim.ChoosePlayerSkill(sim.awaitingPlayer);
-                sim.ResolvePlayerTurn(auto);
+                // 自动战斗也要喝药——否则 UI 自动打一场（不喝药）跟 batchmode 跑同一场景
+                // （TakeAction 里会自动喝药）对不上，剩血能差 20 个点。
+                if (sim.ShouldUsePotion()) sim.ResolvePlayerPotion();
+                else sim.ResolvePlayerTurn(sim.ChoosePlayerSkill(sim.awaitingPlayer));
                 ClearButtons();
             }
 
