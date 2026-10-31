@@ -1,0 +1,12 @@
+enemyId,itemId,chance
+en_bonefish,eq_wpn,0.10
+en_stonelizard,eq_arm,0.10
+en_rat,eq_bts,0.08
+en_firetiger,eq_wpn,0.12
+en_graywolf,eq_bts,0.12
+en_bear,eq_arm,0.15
+en_fox,eq_trk,0.20
+en_snake,eq_trk,0.15
+en_bird,eq_arm,0.35
+en_jelly,eq_tot,1.00
+en_tigerking,eq_tot,1.00

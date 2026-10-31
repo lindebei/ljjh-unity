@@ -22,6 +22,9 @@ namespace LingJing.UI
         public float timeScale = 1f;
         public bool autoBattle;
 
+        [Tooltip("是否给三只兽穿满配五件。装备界面还没做，先用这个开关对比战力与胜率")]
+        public bool equipFullSet = true;
+
         BattleSimulator sim;
 
         /// <summary>给编辑器脚本（自动截图/批量测试）读状态用。</summary>
@@ -31,6 +34,7 @@ namespace LingJing.UI
         readonly List<Text> logLines = new List<Text>();
         readonly Dictionary<BattleUnit, RectTransform> hpFills = new Dictionary<BattleUnit, RectTransform>();
         readonly Dictionary<BattleUnit, Text> hpTexts = new Dictionary<BattleUnit, Text>();
+        readonly Dictionary<BattleUnit, Text> powerTexts = new Dictionary<BattleUnit, Text>();
         readonly Dictionary<BattleUnit, RectTransform> gaugeFills = new Dictionary<BattleUnit, RectTransform>();
         readonly Dictionary<BattleUnit, GameObject> gaugeRows = new Dictionary<BattleUnit, GameObject>();   // 未入场的波次整行藏起来
         readonly Dictionary<BattleUnit, Text> gaugeTexts = new Dictionary<BattleUnit, Text>();
@@ -242,7 +246,21 @@ namespace LingJing.UI
             {
                 var def = BattleDatabase.GetCreature(players[i]);
                 if (def == null) { Debug.LogError("[BattleHud] 缺少 " + players[i]); return; }
-                sim.AddPlayer(def, playerLevel, free);
+
+                // 装备还没有换装界面，先给个整体开关：开了就五件全穿，方便看战力与胜率差
+                EquipmentLoadout gear = null;
+                if (equipFullSet)
+                {
+                    gear = new EquipmentLoadout();
+                    string[] gearIds = { "eq_wpn", "eq_arm", "eq_trk", "eq_bts", "eq_tot" };
+                    for (int g = 0; g < gearIds.Length; g++)
+                    {
+                        var eq = BattleDatabase.GetEquipment(gearIds[g]);
+                        if (eq != null) gear.Set(eq);
+                    }
+                }
+
+                sim.AddPlayer(def, playerLevel, free, gear);
             }
 
             int band = cfg.BandIndex(enemyLevel);
@@ -348,6 +366,13 @@ namespace LingJing.UI
                 hpTexts[u] = MakeText(hpBar.Item1, "HpText", "", 17, Color.white, TextAnchor.MiddleCenter,
                     new Vector2(0f, 0f), new Vector2(tw, 26f), new Vector2(0f, 0f), Vector2.zero);
                 Stretch(hpTexts[u].rectTransform);
+
+                // 战力：只显示不参与结算。放在名字/血条同一个竖列里最省事——
+                // 之前挂在卡片左下角，Text 建出来了、文本也写进去了，但就是画不出来
+                // （卡片自身 Image 与列布局的层级关系），挪进 col 立刻可见。
+                powerTexts[u] = MakeText(col, "Power", "战力 -", 18, new Color(0.72f, 0.80f, 0.90f),
+                    TextAnchor.MiddleLeft, new Vector2(0f, 1f), new Vector2(tw, 24f),
+                    new Vector2(0f, 1f), Vector2.zero);
 
                 // 行动条（左侧竖排）
                 var gRow = MakePanel(gaugeColumn, "GRow_" + u.id, new Color(0.13f, 0.15f, 0.19f, 1f));
@@ -594,6 +619,10 @@ namespace LingJing.UI
                     // 倒下的立绘压暗，别让它在卡片里看着还活着
                     portraits[u].color = u.IsAlive ? Color.white : new Color(0.35f, 0.35f, 0.40f, 0.55f);
                 }
+                if (powerTexts.ContainsKey(u) && powerTexts[u] != null)
+                {
+                    powerTexts[u].text = "战力 " + Mathf.RoundToInt(u.power);
+                }
 
                 // 卡片显示规则：我方一直显示（死了压暗）；敌方必须已入场且还活着。
                 // 一波清完立刻收尸，否则第二波进场时上一波的卡还占着位置（4+3 波就会出现 6 张卡）。
@@ -640,6 +669,17 @@ namespace LingJing.UI
                 var t = skillLabels[i];
                 sb.Append(t == null ? "[null]" : ("[" + t.text.Replace("\n", "/") + "]"));
             }
+
+            sb.Append(" | power=");
+            int shown = 0;
+            for (int i = 0; i < sim.units.Count && shown < 6; i++)
+            {
+                var u = sim.units[i];
+                Text pt = powerTexts.ContainsKey(u) ? powerTexts[u] : null;
+                sb.AppendFormat("[{0} val={1:F0} txt={2}]", u.displayName, u.power,
+                    pt == null ? "null" : ("'" + pt.text + "'"));
+                shown++;
+            }
             return sb.ToString();
         }
 
@@ -667,6 +707,28 @@ namespace LingJing.UI
             ClearButtons(); // 先清按钮（它会把横幅清空），再写结果文字，别反了
             statusBanner.text = win ? "战斗结束：胜利" : "战斗结束：失败";
             statusBanner.color = win ? new Color(0.6f, 1f, 0.6f) : new Color(1f, 0.5f, 0.5f);
+
+            // 掉落写进战斗日志：不弹窗、不占按钮，跟其它日志一条条读
+            if (win && sim.loot != null && sim.loot.Count > 0)
+            {
+                for (int i = 0; i < sim.loot.Count; i++)
+                {
+                    var eq = LingJing.Battle.BattleDatabase.GetEquipment(sim.loot[i]);
+                    string nm = eq != null ? eq.displayName : sim.loot[i];
+                    AddLog("获得装备：" + nm);
+                }
+            }
+            else if (win)
+            {
+                AddLog("这场没有掉落");
+            }
+        }
+
+        /// <summary>往战斗日志尾部追加一行（日志面板只保留最近 22 行）。</summary>
+        void AddLog(string msg)
+        {
+            sim.log.Add(msg);
+            RefreshLog();
         }
 
         void Flash(string msg)

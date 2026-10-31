@@ -20,6 +20,7 @@ public static class BattleCsvImporter
     const string CreaturesDir = OutRoot + "/Creatures";
     const string SetsDir = OutRoot + "/EnemySkillSets";
     const string EquipDir = OutRoot + "/Equipment";
+    const string DropsDir = OutRoot + "/Drops";
 
     [MenuItem("灵境/导入战斗数据 (CSV → SO)")]
     public static void ImportAll()
@@ -31,10 +32,36 @@ public static class BattleCsvImporter
         ImportEnemySkillSets(skills);
         ImportBattleConfig();
         int equipCount = ImportEquipment();
+        int dropCount = ImportDrops();
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log(string.Format("[BattleCsvImporter] 导入完成：{0} 个技能、{1} 张兽/怪、4 组敌方技能、1 份配置、{2} 件装备。", skills.Count, CountAssets<CreatureDefinition>(CreaturesDir), equipCount));
+        Debug.Log(string.Format("[BattleCsvImporter] 导入完成：{0} 个技能、{1} 张兽/怪、4 组敌方技能、1 份配置、{2} 件装备、{3} 条掉落。", skills.Count, CountAssets<CreatureDefinition>(CreaturesDir), equipCount, dropCount));
+    }
+
+    // ------------------------------------------------------------------ 掉落
+
+    /// <summary>drops.csv：一只怪可以掉多件，概率分别掷。文件名用 敌id__装备id 保证唯一。</summary>
+    static int ImportDrops()
+    {
+        string path = Path.Combine(CsvDir, "drops.csv");
+        if (!File.Exists(path)) return 0;
+        var rows = ReadCsv(path);
+
+        for (int i = 0; i < rows.Count; i++)
+        {
+            var r = rows[i];
+            string enemyId = Get(r, "enemyId");
+            string itemId = Get(r, "itemId");
+            if (string.IsNullOrEmpty(enemyId) || string.IsNullOrEmpty(itemId)) continue;
+
+            var so = Upsert<LootEntry>(DropsDir, enemyId + "__" + itemId);
+            so.enemyId = enemyId;
+            so.itemId = itemId;
+            so.chance = Mathf.Clamp01(GetFloat(r, "chance"));
+            EditorUtility.SetDirty(so);
+        }
+        return CountAssets<LootEntry>(DropsDir);
     }
 
     // ------------------------------------------------------------------ 装备
@@ -258,6 +285,7 @@ public static class BattleCsvImporter
         EnsureFolder(OutRoot, "Creatures");
         EnsureFolder(OutRoot, "EnemySkillSets");
         EnsureFolder(OutRoot, "Equipment");
+        EnsureFolder(OutRoot, "Drops");
     }
 
     static void EnsureFolder(string parent, string child)

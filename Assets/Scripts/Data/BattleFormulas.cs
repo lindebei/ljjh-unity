@@ -108,6 +108,14 @@ namespace LingJing.Data
                 s.tal + Mathf.RoundToInt(freePoints[5] * potentials.tal));
         }
 
+        /// <summary>战力 = 攻击×6 + 防御×4 + 速度×3 + 精神×2 + 天赋×2 + 生命×0.6 + 装备战力。
+        /// 只用于展示与遇敌匹配，**不参与任何结算**（见 装备与战力系统设计.md 的红线）。</summary>
+        public static float Power(SixStats s, int level, float equipPower)
+        {
+            float hp = MaxHp(s.vit, level);
+            return s.atk * 6f + s.def * 4f + s.spd * 3f + s.spr * 2f + s.tal * 2f + hp * 0.6f + equipPower;
+        }
+
         /// <summary>升级经验 = round_to_10(80 + 8 × 当前等级 + 1.5 × 当前等级²)</summary>
         public static int ExpToNext(int level)
         {

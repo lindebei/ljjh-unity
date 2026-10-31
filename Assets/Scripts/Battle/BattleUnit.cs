@@ -47,6 +47,10 @@ namespace LingJing.Battle
         // 嘲讽：>0 时敌方普通攻击必须打这只
         public int tauntRounds;
 
+        /// <summary>战力：只用于展示与遇敌匹配，不参与任何结算。</summary>
+        public float power;
+        public float equipPower;
+
         public float maxHp;
         public float hp;
         public float shield;
@@ -67,6 +71,9 @@ namespace LingJing.Battle
 
         /// <summary>是否已经入场。多波战斗里，后面的批次先建好但不参战（行动条不动、不可被选为目标）。</summary>
         public bool inField = true;
+
+        /// <summary>掉落是否已经掷过（同一只怪只掷一次）。</summary>
+        public bool lootRolled;
 
         public float HpPercent { get { return maxHp <= 0f ? 0f : Mathf.Clamp01(hp / maxHp); } }
 

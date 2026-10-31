@@ -18,6 +18,9 @@ namespace LingJing.Battle
         public int playerActions;
         public bool timedOut;
 
+        /// <summary>本场掉到的装备 id（按掉落顺序，重复不合并）。</summary>
+        public List<string> loot;
+
         public override string ToString()
         {
             return string.Format("{0,6:F1}s  剩血 {1,5:F1}%  存活 {2}/3  敌方剩 {3,5:F1}%  回合 {4}",

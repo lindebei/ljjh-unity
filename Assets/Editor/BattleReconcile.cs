@@ -90,13 +90,31 @@ public static class BattleReconcile
         report.AppendLine("# 我方：水/火/风，等级随场景（默认 24 级满自由点）；期望值模式 1 场，随机模式 " + Runs + " 场");
         report.AppendLine("场景\t模式\t场次\t胜率\t平均回合\t平均时长s\t我方剩血%\t敌方剩血%\t平均存活");
 
+        var lootTally = new Dictionary<string, int>();
         foreach (var sc in scenarios)
         {
             var expected = Agg(Batch(baseCfg, sc, true, 1));
-            var random = Agg(Batch(baseCfg, sc, false, Runs));
+            var rr = Batch(baseCfg, sc, false, Runs);
+            var random = Agg(rr);
             report.AppendLine(Row(sc.name, "期望值", expected));
             report.AppendLine(Row(sc.name, "随机", random));
+
+            for (int i = 0; i < rr.Count; i++)
+            {
+                if (rr[i].loot == null) continue;
+                for (int k = 0; k < rr[i].loot.Count; k++)
+                {
+                    string id = rr[i].loot[k];
+                    int n;
+                    lootTally.TryGetValue(id, out n);
+                    lootTally[id] = n + 1;
+                }
+            }
         }
+
+        report.AppendLine();
+        report.AppendLine("# 掉落统计（所有随机场次合计，含满配场）");
+        foreach (var kv in lootTally) report.AppendLine(kv.Key + "\t" + kv.Value);
 
         Directory.CreateDirectory(Path.GetDirectoryName(ReportPath));
         File.WriteAllText(ReportPath, report.ToString(), new UTF8Encoding(false));

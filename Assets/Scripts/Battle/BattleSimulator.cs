@@ -66,6 +66,26 @@ namespace LingJing.Battle
             this.calc = new DamageCalculator(config, this.rng);
         }
 
+        // ------------------------------------------------------------------ 掉落
+
+        /// <summary>本场掉到的装备 id（重复不合并，交给背包层堆叠）。</summary>
+        public readonly List<string> loot = new List<string>();
+
+        /// <summary>
+        /// 怪死的一瞬间掷一次骰子。放在每拍结算后统一扫，是因为死法有普攻、多段、DoT 三种，
+        /// 在 TakeDamage 里挂事件反而要额外判断「这次是不是最后一击」。
+        /// </summary>
+        void CollectLoot()
+        {
+            for (int i = 0; i < units.Count; i++)
+            {
+                var u = units[i];
+                if (u.side != Side.Enemy || u.IsAlive || u.lootRolled) continue;
+                u.lootRolled = true;
+                Loot.Roll(u.id, rng, loot);
+            }
+        }
+
         // ------------------------------------------------------------------ 建队
 
         public BattleUnit AddPlayer(CreatureDefinition def, int level, int[] freePoints, EquipmentLoadout loadout = null)
@@ -90,6 +110,8 @@ namespace LingJing.Battle
                 maxHp = BattleFormulas.MaxHp(s.vit, level)
             };
             u.hp = u.maxHp;
+            u.equipPower = loadout != null ? loadout.Power() : 0f;
+            u.power = BattleFormulas.Power(s, level, u.equipPower);
             units.Add(u);
             return u;
         }
@@ -120,6 +142,7 @@ namespace LingJing.Battle
                 maxHp = BattleFormulas.MaxHp(s.vit, level) * hpMul
             };
             u.hp = u.maxHp;
+            u.power = BattleFormulas.Power(s, level, 0f) * qScale;   // 战力含品质与等级带放大，用于展示/遇敌匹配
             u.inField = false;              // 等 Begin()/入波时再上场
             units.Add(u);
 
@@ -277,6 +300,7 @@ namespace LingJing.Battle
             }
 
             TakeAction(actor);
+            CollectLoot();
             return true;
         }
 
@@ -306,6 +330,7 @@ namespace LingJing.Battle
 
             var targets = PickPlayerTargets(actor, skill);
             Cast(actor, skill, targets);
+            CollectLoot();
             AfterAction(actor);
         }
 
@@ -335,7 +360,8 @@ namespace LingJing.Battle
                 enemyHpPercent = emax > 0f ? ehp / emax : 0f,
                 rounds = round,
                 playerActions = playerActionsTotal,
-                timedOut = timedOut
+                timedOut = timedOut,
+                loot = new List<string>(loot)
             };
         }
 
@@ -451,6 +477,8 @@ namespace LingJing.Battle
                     Log(string.Format("回合{0} 灵能自然回复 +{1} → {2}", round, regen, spirit));
                 }
             }
+
+            CollectLoot();   // DoT 也能打死怪，这里补一次
         }
 
         // ------------------------------------------------------------------ 玩家侧
