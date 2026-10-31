@@ -40,8 +40,8 @@ public static class BattleCsvImporter
     // ------------------------------------------------------------------ 装备
 
     /// <summary>
-    /// equipment.csv 的主值只是「1 级基础值」，品质系数（1.0/1.3/1.6/2.0/2.6）在这里乘进去；
-    /// 强化系数（+8%/级）留到运行时 `MainValueAt(enhance)` 再乘，这样同一件装备强化升级不用重导。
+    /// 每件装备固定 3 条六维百分比词条（用户 2026-11-01 定稿口径：5 个槽位，每件加六维里的 3 种）。
+    /// 品质暂不做，quality 字段留着以后用。
     /// </summary>
     static int ImportEquipment()
     {
@@ -59,37 +59,22 @@ public static class BattleCsvImporter
             so.id = id;
             so.displayName = Get(r, "name");
             so.slot = (EquipSlot)Mathf.Clamp(GetInt(r, "slot"), 0, 4);
-            so.quality = Mathf.Clamp(GetInt(r, "quality"), 0, 4);
-            so.mainStat = ParseEnum<StatKind>(Get(r, "mainStat"), StatKind.Atk);
-            so.mainValue = GetFloat(r, "mainValue") * EquipmentDefinition.QualityCoeff[so.quality];
-            so.enhance = Mathf.Clamp(GetInt(r, "enhance"), 0, 5);
-            so.spiritMaxBonus = 0;
-            so.subs = new List<StatMod>();
+            so.mods = new List<StatMod>();
 
-            string[] keys = { "sub1", "sub2", "sub3", "sub4" };
-            for (int k = 0; k < keys.Length; k++)
+            for (int k = 1; k <= 3; k++)
             {
-                string raw = Get(r, keys[k]);
-                if (string.IsNullOrEmpty(raw)) continue;
-                int colon = raw.IndexOf(':');
-                if (colon <= 0) continue;
-                string key = raw.Substring(0, colon).Trim();
-                float val = 0f;
-                float.TryParse(raw.Substring(colon + 1).Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out val);
-                if (key == "spiritFlat") { so.spiritMaxBonus += Mathf.RoundToInt(val); continue; }
-                StatKind sk;
-                switch (key)
+                string statRaw = Get(r, "stat" + k);
+                if (string.IsNullOrEmpty(statRaw)) continue;
+                float pct = GetFloat(r, "pct" + k);
+                if (pct <= 0f) continue;
+                so.mods.Add(new StatMod
                 {
-                    case "atkPct": sk = StatKind.Atk; break;
-                    case "defPct": sk = StatKind.Def; break;
-                    case "spdPct": sk = StatKind.Spd; break;
-                    case "vitPct": sk = StatKind.Vit; break;
-                    case "sprPct": sk = StatKind.Spr; break;
-                    case "talPct": sk = StatKind.Tal; break;
-                    default: continue;
-                }
-                so.subs.Add(new StatMod { stat = sk, percent = val });
+                    stat = ParseEnum<StatKind>(statRaw, StatKind.Atk),
+                    percent = pct
+                });
             }
+            if (so.mods.Count != 3)
+                Debug.LogWarning("[BattleCsvImporter] 装备 " + id + " 词条数不是 3：" + so.mods.Count);
             EditorUtility.SetDirty(so);
         }
         return CountAssets<EquipmentDefinition>(EquipDir);

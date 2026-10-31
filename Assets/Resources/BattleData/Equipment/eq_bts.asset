@@ -10,20 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f6d9f174913ef88469db2d824a34e6ed, type: 3}
-  m_Name: eq_arm_purple
+  m_Name: eq_bts
   m_EditorClassIdentifier: Assembly-CSharp::LingJing.Data.EquipmentDefinition
-  id: eq_arm_purple
-  displayName: "\u7384\u5CA9\u80F8\u7532"
-  slot: 1
-  quality: 3
-  mainStat: 1
-  mainValue: 22
-  enhance: 3
-  subs:
-  - stat: 1
-    percent: 0.1
-  - stat: 3
-    percent: 0.08
+  id: eq_bts
+  displayName: "\u75BE\u6F6E\u5C65"
+  slot: 3
+  quality: 0
+  mods:
+  - stat: 2
+    percent: 0.12
   - stat: 0
+    percent: 0.04
+  - stat: 1
     percent: 0.03
-  spiritMaxBonus: 0

@@ -195,10 +195,10 @@ public static class BattleReconcile
 
     static readonly string[] FullSetIds =
     {
-        "eq_wpn_purple", "eq_arm_purple", "eq_trk_purple", "eq_bts_purple", "eq_tot_purple"
+        "eq_wpn", "eq_arm", "eq_trk", "eq_bts", "eq_tot"
     };
 
-    /// <summary>满配：5 件紫装（CSV 里 enhance=3）。每只兽各一套。</summary>
+    /// <summary>满配：5 个槽位各一件（唯一一套，品质暂不做）。每只兽各一套。</summary>
     static EquipmentLoadout FullGear()
     {
         var lo = new EquipmentLoadout();

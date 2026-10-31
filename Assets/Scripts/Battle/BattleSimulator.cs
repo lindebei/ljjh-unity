@@ -53,8 +53,6 @@ namespace LingJing.Battle
             }
         }
         readonly Dictionary<BattleUnit, int> focusThisRound = new Dictionary<BattleUnit, int>();
-        readonly Dictionary<BattleUnit, int> equipSpiritBonus = new Dictionary<BattleUnit, int>();
-
         /// <summary>最近一次建队时读到的装备战力，供 UI / 对账报告显示。</summary>
         public float lastEquipPower;
 
@@ -73,10 +71,9 @@ namespace LingJing.Battle
         public BattleUnit AddPlayer(CreatureDefinition def, int level, int[] freePoints, EquipmentLoadout loadout = null)
         {
             var s = BattleFormulas.PlayerStats(def.baseStats, level, def.potentials, freePoints);
-            int spiritBonus = 0;
             if (loadout != null && !loadout.IsEmpty())
             {
-                s = loadout.Apply(s, out spiritBonus);
+                s = loadout.Apply(s);
                 lastEquipPower = loadout.Power();
             }
             var u = new BattleUnit
@@ -93,7 +90,6 @@ namespace LingJing.Battle
                 maxHp = BattleFormulas.MaxHp(s.vit, level)
             };
             u.hp = u.maxHp;
-            equipSpiritBonus.Add(u, spiritBonus);
             units.Add(u);
             return u;
         }
@@ -139,10 +135,7 @@ namespace LingJing.Battle
         /// <summary>开场：算归一系数（我方开场速度均值，整场锁死）、灵能起手、药品数。</summary>
         public void Begin()
         {
-            // 灵能上限 = 配置 + 装备加成（全队取最大），必须在算初始灵能之前定下来
-            int bonus = 0;
-            foreach (var kv in equipSpiritBonus) if (kv.Value > bonus) bonus = kv.Value;
-            spiritMax = config.spiritMax + bonus;
+            spiritMax = config.spiritMax;
             var players = Alive(Side.Player);
             float sumSpd = 0f, sumSpr = 0f;
             for (int i = 0; i < players.Count; i++)

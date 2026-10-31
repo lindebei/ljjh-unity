@@ -1,11 +1,6 @@
-﻿id,name,slot,quality,mainStat,mainValue,enhance,sub1,sub2,sub3,sub4
-eq_wpn_blue,水纹短刃,0,2,Atk,10,0,atkPct:0.05,spdPct:0.03,,
-eq_wpn_purple,潮汐长刃,0,3,Atk,10,3,atkPct:0.08,spdPct:0.04,,
-eq_arm_blue,鳞甲背心,1,2,Def,11,0,defPct:0.06,vitPct:0.05,,
-eq_arm_purple,玄岩胸甲,1,3,Def,11,3,defPct:0.10,vitPct:0.08,atkPct:0.03,
-eq_trk_blue,润灵佩,2,2,Spr,10,0,sprPct:0.06,spiritFlat:1,,
-eq_trk_purple,灵犀坠,2,3,Spr,10,3,sprPct:0.10,spiritFlat:1,talPct:0.06,
-eq_bts_blue,轻风靴,3,2,Spd,8,0,spdPct:0.06,atkPct:0.03,,
-eq_bts_purple,疾潮履,3,3,Spd,8,3,spdPct:0.10,vitPct:0.05,,
-eq_tot_blue,青纹图腾,4,2,Tal,10,0,talPct:0.06,vitPct:0.04,,
-eq_tot_purple,古潮图腾,4,3,Tal,10,3,talPct:0.10,atkPct:0.05,vitPct:0.05,
+id,name,slot,stat1,pct1,stat2,pct2,stat3,pct3
+eq_wpn,潮汐长刃,0,Atk,0.12,Spd,0.04,Tal,0.03
+eq_arm,玄岩胸甲,1,Def,0.12,Vit,0.10,Atk,0.03
+eq_trk,灵犀坠,2,Spr,0.10,Tal,0.06,Vit,0.05
+eq_bts,疾潮履,3,Spd,0.12,Atk,0.04,Def,0.03
+eq_tot,古潮图腾,4,Tal,0.10,Atk,0.05,Vit,0.06

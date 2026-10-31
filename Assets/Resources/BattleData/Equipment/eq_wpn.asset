@@ -10,18 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f6d9f174913ef88469db2d824a34e6ed, type: 3}
-  m_Name: eq_wpn_purple
+  m_Name: eq_wpn
   m_EditorClassIdentifier: Assembly-CSharp::LingJing.Data.EquipmentDefinition
-  id: eq_wpn_purple
+  id: eq_wpn
   displayName: "\u6F6E\u6C50\u957F\u5203"
   slot: 0
-  quality: 3
-  mainStat: 0
-  mainValue: 20
-  enhance: 3
-  subs:
+  quality: 0
+  mods:
   - stat: 0
-    percent: 0.08
+    percent: 0.12
   - stat: 2
     percent: 0.04
-  spiritMaxBonus: 0
+  - stat: 5
+    percent: 0.03

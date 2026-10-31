@@ -10,18 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f6d9f174913ef88469db2d824a34e6ed, type: 3}
-  m_Name: eq_wpn_blue
+  m_Name: eq_arm
   m_EditorClassIdentifier: Assembly-CSharp::LingJing.Data.EquipmentDefinition
-  id: eq_wpn_blue
-  displayName: "\u6C34\u7EB9\u77ED\u5203"
-  slot: 0
-  quality: 2
-  mainStat: 0
-  mainValue: 16
-  enhance: 0
-  subs:
+  id: eq_arm
+  displayName: "\u7384\u5CA9\u80F8\u7532"
+  slot: 1
+  quality: 0
+  mods:
+  - stat: 1
+    percent: 0.12
+  - stat: 3
+    percent: 0.1
   - stat: 0
-    percent: 0.05
-  - stat: 2
     percent: 0.03
-  spiritMaxBonus: 0
