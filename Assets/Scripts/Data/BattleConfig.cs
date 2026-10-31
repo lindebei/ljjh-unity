@@ -60,6 +60,18 @@ namespace LingJing.Data
         public float[] qualityAtkMul  = { 0.60f, 1.05f, 1.15f, 1.25f, 1.35f };
         public float[] qualitySpdMul  = { 0.85f, 1.00f, 1.05f, 1.10f, 1.15f };
 
+        [Header("难度旋钮")]
+        // 敌人统一强度系数：只乘「攻击」与「生命」，不动设计文档里的品质倍率。
+        // 用途：v0.1 只要「胜率区间」对（普通 92–96%、满编波次 30–40%），不动原数值表。
+        // 调这个值不用改 6 组品质倍率，也就不会让设计文档与实现打架。
+        public float enemyPowerScale = 1f;
+
+        // 波次喘息：清完一波、下一波入场时给我方的补给。
+        // 没有这个，10 只怪（3 波）是纯堆数量——我方 3 次行动换敌方 10 次，数学上必输；
+        // 有了它，多波变成「资源管理」而不是「必死」。
+        public float waveClearHealPercent = 0.12f;
+        public int waveClearSpirit = 2;
+
         [Header("等级带系数（1–5 / 6–12 / 13–24）")]
         public int[] levelBandUpper = { 5, 12, 24 };
         public float[] levelBandHpMul = { 0.70f, 0.85f, 1.00f };

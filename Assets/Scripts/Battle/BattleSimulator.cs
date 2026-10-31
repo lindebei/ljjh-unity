@@ -88,8 +88,8 @@ namespace LingJing.Battle
         {
             var s = BattleFormulas.EnemyStats(def.baseStats, level);
             int qi = (int)def.quality;
-            float hpMul = config.qualityHpMul[qi] * config.levelBandHpMul[bandIndex];
-            float atkMul = config.qualityAtkMul[qi] * config.levelBandAtkMul[bandIndex];
+            float hpMul = config.qualityHpMul[qi] * config.levelBandHpMul[bandIndex] * config.enemyPowerScale;
+            float atkMul = config.qualityAtkMul[qi] * config.levelBandAtkMul[bandIndex] * config.enemyPowerScale;
 
             var u = new BattleUnit
             {
@@ -168,7 +168,19 @@ namespace LingJing.Battle
                 list[i].gauge = 0f;
             }
             if (index > 0)
-                Log(string.Format("第 {0}/{1} 波入场：{2} 只", index + 1, waves.Count, list.Count));
+            {
+                // 波次喘息：不给补给的话，10 只怪（3 波）就是纯堆数量——我方每回合 3 次行动、
+                // 敌方 10 次，数学上必输（实测 0% 胜）。给一口奶 + 灵能，多波才变成资源管理。
+                var allies = Alive(Side.Player);
+                for (int i = 0; i < allies.Count; i++)
+                {
+                    float heal = allies[i].maxHp * config.waveClearHealPercent;
+                    if (heal > 0f) allies[i].Heal(heal);
+                }
+                spirit = Mathf.Min(config.spiritMax, spirit + config.waveClearSpirit);
+                Log(string.Format("第 {0}/{1} 波入场：{2} 只（我方回复 {3:P0} 生命、灵能 +{4}）",
+                    index + 1, waves.Count, list.Count, config.waveClearHealPercent, config.waveClearSpirit));
+            }
         }
 
         /// <summary>当前波已清空且还有后续波 → 直接入下一波（不判胜利）。</summary>

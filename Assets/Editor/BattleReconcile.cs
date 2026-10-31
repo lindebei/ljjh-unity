@@ -62,6 +62,18 @@ public static class BattleReconcile
                 new[] { "en_firetiger", "en_graywolf", "en_bonefish" },
                 new[] { "en_stonelizard", "en_rat", "en_firetiger" }), 10),
 
+            // ── 同级口径：真实一境是同级推进，只有这组数才能拿来定「胜率该是多少」 ──
+            new Scenario("同级 普通x2 · lv10", W(new[] { "en_bonefish", "en_stonelizard" }), 10, 10),
+            new Scenario("同级 普通x3 · lv10", W(new[] { "en_bonefish", "en_stonelizard", "en_rat" }), 10, 10),
+            new Scenario("同级 上限 普通x4 · lv10", W(new[] { "en_bonefish", "en_stonelizard", "en_rat", "en_bear" }), 10, 10),
+            new Scenario("同级 精英x1 · lv11", W(new[] { "en_bird" }), 11, 10),
+            new Scenario("同级 精英x2 · lv11", W(new[] { "en_bird", "en_fox" }), 11, 10),
+            new Scenario("同级 普2+精2 · lv12", W(new[] { "en_rat", "en_bear", "en_bird", "en_fox" }), 12, 10),
+            new Scenario("同级 小Boss · lv16", W(new[] { "en_jelly" }), 16, 16),
+            new Scenario("同级 波次 4+3+3 (总10) · lv10", W(
+                new[] { "en_bonefish", "en_stonelizard", "en_rat", "en_bear" },
+                new[] { "en_firetiger", "en_graywolf", "en_bonefish" },
+                new[] { "en_stonelizard", "en_rat", "en_firetiger" }), 10, 10),
             // 超出设计的压力档：同屏 10 只（没有波次），只用来确认护栏有效
             new Scenario("压力 同屏x10 · lv10", W(new[] {
                 "en_bonefish", "en_stonelizard", "en_rat", "en_firetiger", "en_graywolf",
@@ -70,7 +82,7 @@ public static class BattleReconcile
 
         var report = new StringBuilder();
         report.AppendLine("# 对账报告 " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-        report.AppendLine("# 我方：水/火/风 24 级，自由点 138 均分六项；期望值模式 1 场，随机模式 " + Runs + " 场");
+        report.AppendLine("# 我方：水/火/风，等级随场景（默认 24 级满自由点）；期望值模式 1 场，随机模式 " + Runs + " 场");
         report.AppendLine("场景\t模式\t场次\t胜率\t平均回合\t平均时长s\t我方剩血%\t敌方剩血%\t平均存活");
 
         foreach (var sc in scenarios)
@@ -91,13 +103,21 @@ public static class BattleReconcile
         public string name;
         public string[][] waves;      // 每个元素是一波（每波 ≤4 只的设计上限由数据决定）
         public int enemyLevel;
+        public int playerLevel;       // 我方等级（真实一境是同级推进，只有同级的胜率才有意义）
+        public int[] freePoints;      // 按 playerLevel 给：每级 6 点，六项均分
 
-        public Scenario(string name, string[][] waves, int level)
+        public Scenario(string name, string[][] waves, int enemyLevel, int playerLevel)
         {
             this.name = name;
             this.waves = waves;
-            this.enemyLevel = level;
+            this.enemyLevel = enemyLevel;
+            this.playerLevel = playerLevel;
+            int per = (playerLevel - 1) * 6 / 6;      // 每级 6 点自由点，均分到六项
+            this.freePoints = new[] { per, per, per, per, per, per };
         }
+
+        public Scenario(string name, string[][] waves, int enemyLevel)
+            : this(name, waves, enemyLevel, PlayerLevel) { }
     }
 
     static string[][] W(params string[][] waves) { return waves; }
@@ -143,7 +163,7 @@ public static class BattleReconcile
         {
             var def = BattleDatabase.GetCreature(Players[i]);
             if (def == null) { Debug.LogError("[BattleReconcile] 缺 " + Players[i]); return null; }
-            sim.AddPlayer(def, PlayerLevel, FreePoints);
+            sim.AddPlayer(def, sc.playerLevel, sc.freePoints);
         }
 
         int band = cfg.BandIndex(sc.enemyLevel);

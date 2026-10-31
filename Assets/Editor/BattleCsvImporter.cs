@@ -193,6 +193,9 @@ public static class BattleCsvImporter
         cfg.healTalentConstant = GetFloat(map, "healTalentConstant", cfg.healTalentConstant);
         cfg.healSecondRatio = GetFloat(map, "healSecondRatio", cfg.healSecondRatio);
         cfg.timeCapSeconds = GetFloat(map, "timeCapSeconds", cfg.timeCapSeconds);
+        cfg.enemyPowerScale = GetFloat(map, "enemyPowerScale", cfg.enemyPowerScale);
+        cfg.waveClearHealPercent = GetFloat(map, "waveClearHealPercent", cfg.waveClearHealPercent);
+        cfg.waveClearSpirit = GetInt(map, "waveClearSpirit", cfg.waveClearSpirit);
         EditorUtility.SetDirty(cfg);
     }
 

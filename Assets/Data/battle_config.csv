@@ -1,4 +1,4 @@
-key,value
+﻿key,value
 attackK,3.6
 defConstant,300
 elementalAdvantage,1.25
@@ -21,3 +21,6 @@ playerActionsPerRound,3
 healTalentConstant,250
 healSecondRatio,0.5
 timeCapSeconds,900
+enemyPowerScale,1.40
+waveClearHealPercent,0.12
+waveClearSpirit,2
