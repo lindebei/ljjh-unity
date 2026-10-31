@@ -18,15 +18,15 @@ MonoBehaviour:
   element: 3
   spiritCost: 3
   cooldown: 0
-  multiplier: 2.2
+  multiplier: 1.2
   segments: 1
   spreadSegments: 0
-  targetSide: 0
+  targetSide: 3
   targetCount: 1
   requiresHitCheck: 1
   appliedStatus: 6
-  dotStacks: 2
-  controlChance: 0.35
+  dotStacks: 1
+  controlChance: 0.25
   controlDuration: 1
   gaugePushbackPercent: 0
   taunt: 0

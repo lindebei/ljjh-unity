@@ -66,9 +66,9 @@ public static class BattleReconcile
             new Scenario("同级 普通x2 · lv10", W(new[] { "en_bonefish", "en_stonelizard" }), 10, 10),
             new Scenario("同级 普通x3 · lv10", W(new[] { "en_bonefish", "en_stonelizard", "en_rat" }), 10, 10),
             new Scenario("同级 上限 普通x4 · lv10", W(new[] { "en_bonefish", "en_stonelizard", "en_rat", "en_bear" }), 10, 10),
-            new Scenario("同级 精英x1 · lv11", W(new[] { "en_bird" }), 11, 10),
-            new Scenario("同级 精英x2 · lv11", W(new[] { "en_bird", "en_fox" }), 11, 10),
-            new Scenario("同级 普2+精2 · lv12", W(new[] { "en_rat", "en_bear", "en_bird", "en_fox" }), 12, 10),
+            new Scenario("同级 精英x1 · lv11", W(new[] { "en_bird" }), 11, 11),
+            new Scenario("同级 精英x2 · lv11", W(new[] { "en_bird", "en_fox" }), 11, 11),
+            new Scenario("同级 普2+精2 · lv12", W(new[] { "en_rat", "en_bear", "en_bird", "en_fox" }), 12, 12),
             new Scenario("同级 小Boss · lv16", W(new[] { "en_jelly" }), 16, 16),
             new Scenario("同级 波次 4+3+3 (总10) · lv10", W(
                 new[] { "en_bonefish", "en_stonelizard", "en_rat", "en_bear" },
@@ -76,7 +76,7 @@ public static class BattleReconcile
                 new[] { "en_stonelizard", "en_rat", "en_firetiger" }), 10, 10),
             // ── 带装备口径：满配（5 件紫 + 强化 3）对照，验收标准是「同级小 Boss ≥90%」 ──
             new Scenario("同级 普通x4 · lv10 +满配", W(new[] { "en_bonefish", "en_stonelizard", "en_rat", "en_bear" }), 10, 10, true),
-            new Scenario("同级 精英x2 · lv11 +满配", W(new[] { "en_bird", "en_fox" }), 11, 10, true),
+            new Scenario("同级 精英x2 · lv11 +满配", W(new[] { "en_bird", "en_fox" }), 11, 11, true),
             new Scenario("同级 小Boss · lv16 +满配", W(new[] { "en_jelly" }), 16, 16, true),
 
             // 超出设计的压力档：同屏 10 只（没有波次），只用来确认护栏有效
@@ -181,8 +181,8 @@ public static class BattleReconcile
             new Scenario("波次 4+3+3 (总10)", W(new[] { "en_bonefish", "en_stonelizard", "en_rat", "en_bear" },
                                                 new[] { "en_firetiger", "en_graywolf", "en_bonefish" },
                                                 new[] { "en_fox", "en_bird", "en_rat" }), 10, 10),
-            new Scenario("同级 精英x2 · lv11", W(new[] { "en_bird", "en_tigerking" }), 11, 10),
-            new Scenario("同级 小Boss · lv16", W(new[] { "en_snake" }), 16, 16, false),
+            new Scenario("同级 精英x2 · lv11", W(new[] { "en_bird", "en_fox" }), 11, 11),
+            new Scenario("同级 小Boss · lv16", W(new[] { "en_jelly" }), 16, 16),
         };
 
         var baseCfg = BattleDatabase.Config;
@@ -218,7 +218,7 @@ public static class BattleReconcile
                                                 new[] { "en_firetiger", "en_graywolf", "en_bonefish" },
                                                 new[] { "en_fox", "en_bird", "en_rat" }), 10, 10),
             new Scenario("上限 普2+精2 · lv10", W(new[] { "en_rat", "en_bear", "en_bird", "en_fox" }), 10),
-            new Scenario("同级 精英x2 · lv11", W(new[] { "en_bird", "en_fox" }), 11, 10),
+            new Scenario("同级 精英x2 · lv11", W(new[] { "en_bird", "en_fox" }), 11, 11),
             new Scenario("同级 小Boss · lv16", W(new[] { "en_jelly" }), 16, 16),
         };
 
@@ -255,6 +255,48 @@ public static class BattleReconcile
             finally { UnityEngine.Object.DestroyImmediate(cfg); }
         }
         return results;
+    }
+
+    /// <summary>临时诊断：同一队敌人、玩家 24 级 vs 10 级，把双方属性与逐条日志打出来。</summary>
+    public static void DebugLevel()
+    {
+        var sb = new System.Text.StringBuilder();
+        string[][] waves = new string[][] {
+            new[] { "en_bonefish", "en_stonelizard", "en_rat", "en_bear" },
+            new[] { "en_firetiger", "en_graywolf", "en_bonefish", "en_rat" } };
+        int[] levels = { 24, 10 };
+        for (int L = 0; L < levels.Length; L++)
+        {
+            var sc = new Scenario("dbg", waves, 10, levels[L]);
+            var cfg = UnityEngine.Object.Instantiate(BattleDatabase.Config);
+            cfg.useExpectedValue = false;
+            var sim = new BattleSimulator(cfg, 1000);
+            for (int i = 0; i < Players.Length; i++)
+                sim.AddPlayer(BattleDatabase.GetCreature(Players[i]), sc.playerLevel, sc.freePoints, null);
+            int band = cfg.BandIndex(sc.enemyLevel);
+            for (int w = 0; w < sc.waves.Length; w++)
+            {
+                for (int i = 0; i < sc.waves[w].Length; i++)
+                    sim.AddEnemy(BattleDatabase.GetCreature(sc.waves[w][i]), 10, band);
+                sim.EndWave();
+            }
+            sim.Begin();
+            sim.verbose = true;
+            sb.AppendLine("===== 玩家等级 " + levels[L] + " =====");
+            for (int i = 0; i < sim.units.Count; i++)
+            {
+                var u = sim.units[i];
+                sb.AppendLine(string.Format("{0}\tL{1}\tHP {2:F0}\tatk {3:F1}\tdef {4:F1}\tspd {5:F1}\t命中基准 {6:F2}",
+                    u.displayName, u.level, u.maxHp, u.EffectiveAtk, u.EffectiveDef, u.stats.spd, 0));
+            }
+            var r = sim.Run(600f);
+            sb.AppendLine("结果: " + r.ToString());
+            int n = Mathf.Min(40, sim.log.Count);
+            for (int i = 0; i < n; i++) sb.AppendLine("  " + sim.log[i]);
+            UnityEngine.Object.DestroyImmediate(cfg);
+        }
+        System.IO.File.WriteAllText("D:/ljjh/tmp/dbg_level.txt", sb.ToString(), new System.Text.UTF8Encoding(false));
+        Debug.Log("[BattleReconcile] 等级诊断 -> D:/ljjh/tmp/dbg_level.txt");
     }
     static Aggregate Aggregate2(List<BattleResult> results)
     {

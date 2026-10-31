@@ -17,8 +17,11 @@ namespace LingJing.Data
         public bool useElementalAdvantage = true;
 
         [Header("命中（等级差 -3..+3）")]
-        public float[] hitByLevelDiff = { 1.00f, 1.00f, 0.95f, 0.85f, 0.75f, 0.65f, 0.55f };
-        public float[] dmgByLevelDiff = { 1.30f, 1.20f, 1.10f, 1.00f, 0.90f, 0.80f, 0.70f };
+        // 按「我方等级 − 敌方等级」取：-3..+3。等级高的一方命中更高。
+        // 2026-11-01 修正：原数组写反了（高等级反而 55% 命中），导致「24 级打 10 级比 10 级打 10 级还难」。
+        public float[] hitByLevelDiff = { 0.55f, 0.65f, 0.75f, 0.85f, 0.95f, 1.00f, 1.00f };
+        // 同上修正：原本也是反的（高等级只吃 0.70 倍伤害）。
+        public float[] dmgByLevelDiff = { 0.70f, 0.80f, 0.90f, 1.00f, 1.10f, 1.20f, 1.30f };
         public float levelDiffDamagePinch = 0.30f;   // 超出 ±3 级后每级 ±10%，封顶 ±30%
 
         [Header("期望值模式（对账 sim/ 用）")]
