@@ -39,3 +39,6 @@ sysinfo.txt
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Unity 崩溃恢复临时场景（重启编辑器会自己重建，不该进仓库）
+Assets/_Recovery/

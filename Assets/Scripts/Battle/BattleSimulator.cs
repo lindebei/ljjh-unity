@@ -19,6 +19,11 @@ namespace LingJing.Battle
 
         public bool verbose;
 
+        /// <summary>true：轮到玩家时停下来等 UI 点按钮；false：全部自动出招（批量对账用）。</summary>
+        public bool interactive;
+        /// <summary>交互模式下正在等玩家操作的自己人。</summary>
+        public BattleUnit awaitingPlayer;
+
         public int spirit;
         public int potions;
         public float time;
@@ -122,36 +127,77 @@ namespace LingJing.Battle
         {
             float cap = timeCap > 0f ? timeCap : config.timeCapSeconds;
             bool timedOut = false;
+            bool keep = interactive;
+            interactive = false;   // 批量模式永远自动出招
 
             while (true)
             {
-                if (Alive(Side.Player).Count == 0 || Alive(Side.Enemy).Count == 0) break;
+                if (IsBattleOver) break;
                 if (time >= cap) { timedOut = true; break; }
-
-                time += config.tickSeconds;
-
-                var live = Alive(null);
-                for (int i = 0; i < live.Count; i++)
-                    live[i].gauge += BattleFormulas.GaugeGainPerTick(live[i].EffectiveSpd, meanSpd, config.gaugeGainPerTick);
-
-                BattleUnit actor = null;
-                float best = -1f;
-                for (int i = 0; i < live.Count; i++)
-                {
-                    if (live[i].gauge >= config.gaugeThreshold && live[i].gauge > best)
-                    {
-                        best = live[i].gauge;
-                        actor = live[i];
-                    }
-                }
-                if (actor == null) continue;
-
-                actor.gauge = 0f;
-                actor.actionsTaken++;
-                TakeAction(actor);
+                StepOnce();
             }
 
+            interactive = keep;
             return BuildResult(timedOut);
+        }
+
+        public bool IsBattleOver
+        {
+            get { return Alive(Side.Player).Count == 0 || Alive(Side.Enemy).Count == 0; }
+        }
+
+        /// <summary>
+        /// 推进一拍。返回 true 表示这拍有人出手（交互模式下则是「轮到玩家了，等你点按钮」）。
+        /// 交互模式时把出手权交出去，UI 调 ResolvePlayerTurn 才真正结算。
+        /// </summary>
+        public bool StepOnce()
+        {
+            if (IsBattleOver) return false;
+
+            time += config.tickSeconds;
+
+            var live = Alive(null);
+            for (int i = 0; i < live.Count; i++)
+                live[i].gauge += BattleFormulas.GaugeGainPerTick(live[i].EffectiveSpd, meanSpd, config.gaugeGainPerTick);
+
+            BattleUnit actor = null;
+            float best = -1f;
+            for (int i = 0; i < live.Count; i++)
+            {
+                if (live[i].gauge >= config.gaugeThreshold && live[i].gauge > best)
+                {
+                    best = live[i].gauge;
+                    actor = live[i];
+                }
+            }
+            if (actor == null) return false;
+
+            actor.gauge = 0f;
+            actor.actionsTaken++;
+
+            if (actor.side == Side.Player && interactive)
+            {
+                awaitingPlayer = actor;
+                return true;
+            }
+
+            TakeAction(actor);
+            return true;
+        }
+
+        /// <summary>UI 在等待玩家时调用：用指定技能结算这个行动。</summary>
+        public void ResolvePlayerTurn(SkillDefinition skill)
+        {
+            var actor = awaitingPlayer;
+            awaitingPlayer = null;
+            if (actor == null || skill == null || !actor.IsAlive) return;
+
+            playerActionsTotal++;
+            playerActionsThisRound++;
+
+            var targets = PickPlayerTargets(actor, skill);
+            Cast(actor, skill, targets);
+            AfterAction(actor);
         }
 
         BattleResult BuildResult(bool timedOut)
@@ -216,6 +262,20 @@ namespace LingJing.Battle
             if (actor.side != Side.Player) return;
             if (playerActionsThisRound >= config.playerActionsPerRound)
                 EndRound();
+        }
+
+        /// <summary>交互模式下玩家点「药品」。</summary>
+        public void ResolvePlayerPotion()
+        {
+            var actor = awaitingPlayer;
+            awaitingPlayer = null;
+            if (actor == null || !actor.IsAlive) return;
+
+            playerActionsTotal++;
+            playerActionsThisRound++;
+            if (!TryUsePotion(actor))
+                Log(actor.displayName + " 现在不需要药品（没有低于 35% 血的自己人）");
+            AfterAction(actor);
         }
 
         // ------------------------------------------------------------------ 回合结算
