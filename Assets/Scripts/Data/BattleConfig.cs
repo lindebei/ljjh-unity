@@ -69,6 +69,10 @@ namespace LingJing.Data
         // 波次喘息：清完一波、下一波入场时给我方的补给。
         // 没有这个，10 只怪（3 波）是纯堆数量——我方 3 次行动换敌方 10 次，数学上必输；
         // 有了它，多波变成「资源管理」而不是「必死」。
+        // 品质级难度系数（普通/精英/小Boss/中Boss/大Boss），在品质倍率之上再乘一层。
+        // 用户口径：普通怪满波次可以 100%；精英满波次无装备 70–80%；Boss 无装备 40%。
+        public float[] qualityPowerScale = { 1.0f, 1.70f, 3.20f, 3.60f, 4.00f };
+
         public float waveClearHealPercent = 0.12f;
         public int waveClearSpirit = 2;
 

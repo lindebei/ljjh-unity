@@ -194,6 +194,10 @@ public static class BattleCsvImporter
         cfg.healSecondRatio = GetFloat(map, "healSecondRatio", cfg.healSecondRatio);
         cfg.timeCapSeconds = GetFloat(map, "timeCapSeconds", cfg.timeCapSeconds);
         cfg.enemyPowerScale = GetFloat(map, "enemyPowerScale", cfg.enemyPowerScale);
+        if (map.ContainsKey("qualityPowerScale"))
+        {
+            cfg.qualityPowerScale = GetFloatArray(map["qualityPowerScale"], cfg.qualityPowerScale);
+        }
         cfg.waveClearHealPercent = GetFloat(map, "waveClearHealPercent", cfg.waveClearHealPercent);
         cfg.waveClearSpirit = GetInt(map, "waveClearSpirit", cfg.waveClearSpirit);
         EditorUtility.SetDirty(cfg);
@@ -240,6 +244,20 @@ public static class BattleCsvImporter
         return map.TryGetValue(key, out s) ? s : null;
     }
 
+    static float[] GetFloatArray(string raw, float[] fallback)
+    {
+        if (string.IsNullOrEmpty(raw)) return fallback;
+        var parts = raw.Split('|');
+        var arr = new float[parts.Length];
+        for (int i = 0; i < parts.Length; i++)
+        {
+            float v;
+            if (!float.TryParse(parts[i].Trim(), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out v)) return fallback;
+            arr[i] = v;
+        }
+        return arr;
+    }
     static List<Dictionary<string, string>> ReadCsv(string path)
     {
         var list = new List<Dictionary<string, string>>();

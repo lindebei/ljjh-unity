@@ -75,7 +75,13 @@ MonoBehaviour:
   - 1.05
   - 1.1
   - 1.15
-  enemyPowerScale: 1.4
+  enemyPowerScale: 1
+  qualityPowerScale:
+  - 1
+  - 2.15
+  - 2.3
+  - 2.7
+  - 3.1
   waveClearHealPercent: 0.12
   waveClearSpirit: 2
   levelBandUpper: 050000000c00000018000000

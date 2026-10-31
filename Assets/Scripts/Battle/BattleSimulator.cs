@@ -88,8 +88,10 @@ namespace LingJing.Battle
         {
             var s = BattleFormulas.EnemyStats(def.baseStats, level);
             int qi = (int)def.quality;
-            float hpMul = config.qualityHpMul[qi] * config.levelBandHpMul[bandIndex] * config.enemyPowerScale;
-            float atkMul = config.qualityAtkMul[qi] * config.levelBandAtkMul[bandIndex] * config.enemyPowerScale;
+            float qScale = config.enemyPowerScale *
+                ((config.qualityPowerScale != null && qi < config.qualityPowerScale.Length) ? config.qualityPowerScale[qi] : 1f);
+            float hpMul = config.qualityHpMul[qi] * config.levelBandHpMul[bandIndex] * qScale;
+            float atkMul = config.qualityAtkMul[qi] * config.levelBandAtkMul[bandIndex] * qScale;
 
             var u = new BattleUnit
             {
