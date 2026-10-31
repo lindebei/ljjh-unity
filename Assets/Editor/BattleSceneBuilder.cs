@@ -66,6 +66,42 @@ public static class BattleSceneBuilder
         Debug.Log("[BattleSceneBuilder] 场景已生成：" + EquipScenePath);
     }
 
+    const string MenuScenePath = "Assets/Scenes/MainMenu.unity";
+
+    [MenuItem("灵境/生成 主菜单场景")]
+    public static void BuildMenuScene()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(MenuScenePath));
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+        var camGo = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener));
+        camGo.tag = "MainCamera";
+        var cam = camGo.GetComponent<Camera>();
+        cam.clearFlags = CameraClearFlags.SolidColor;
+        cam.backgroundColor = new Color(0.06f, 0.07f, 0.09f, 1f);
+        cam.orthographic = true;
+        camGo.transform.position = new Vector3(0f, 0f, -10f);
+
+        new GameObject("MainMenu", typeof(LingJing.UI.MainMenu));
+
+        EditorSceneManager.SaveScene(scene, MenuScenePath);
+
+        // 主菜单必须排在 Build Settings 第一位，否则打包启动时不会进菜单
+        var list = new System.Collections.Generic.List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+        list.RemoveAll(s => s.path == MenuScenePath);
+        list.Insert(0, new EditorBuildSettingsScene(MenuScenePath, true));
+        foreach (var p in new[] { ScenePath, WaveScenePath, BossScenePath, EquipScenePath })
+        {
+            if (list.Exists(s => s.path == p)) continue;
+            list.Add(new EditorBuildSettingsScene(p, true));
+        }
+        EditorBuildSettings.scenes = list.ToArray();
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[BattleSceneBuilder] 场景已生成：" + MenuScenePath + "，Build Settings 共 " + list.Count + " 个场景");
+    }
+
     static void BuildInto(string path, string[] wave1, string[] wave2)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path));

@@ -96,6 +96,11 @@ namespace LingJing.UI
             {
                 SceneManager.LoadScene("BattleWaves");
             });
+            MakeButton(canvasGo.transform, "回主菜单", new Vector2(830f, -760f), 200f, () =>
+            {
+                if (Application.CanStreamedLevelBeLoaded("MainMenu")) SceneManager.LoadScene("MainMenu");
+                else Debug.LogWarning("[EquipScreen] MainMenu 不在 Build Settings");
+            });
 
             EnsureEventSystem();
         }

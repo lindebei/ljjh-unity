@@ -6,10 +6,19 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/MainMenu.unity
+    guid: 538c9f7b00b20bb448a745c36c883961
+  - enabled: 1
     path: Assets/Scenes/EquipScreen.unity
     guid: 835f9d0c17cd5474bbe613bab85d333f
   - enabled: 1
     path: Assets/Scenes/BattlePrototype.unity
     guid: 657866ebb4e09ea43ba4aab08fb2a463
+  - enabled: 1
+    path: Assets/Scenes/BattleWaves.unity
+    guid: cd98e68d94dbbb049af78a382e352f0c
+  - enabled: 1
+    path: Assets/Scenes/BattleBoss.unity
+    guid: 9ad403c553688da43877f380116e46e0
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

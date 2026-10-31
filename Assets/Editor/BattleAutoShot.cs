@@ -50,6 +50,12 @@ public static class BattleAutoShot
         Run();
     }
 
+    public static void RunMenu()
+    {
+        ScenePath = "Assets/Scenes/MainMenu.unity";
+        Run();
+    }
+
     public static void RunBoss()
     {
         ScenePath = "Assets/Scenes/BattleBoss.unity";

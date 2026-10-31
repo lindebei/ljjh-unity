@@ -60,6 +60,7 @@ namespace LingJing.UI
         Button potionButton;
         Button autoButton;                 // 自动战斗：等级 <15 时置灰（设计文档「自动战斗需等级 ≥15」）
         Button startButton;                // 编队面板的「开战」
+        Button menuBackButton;             // 结算后「回主菜单」
         GameObject formationPanel;         // 开战前的编队面板（4 选 3，开战后不再给入口）
         readonly List<string> picked = new List<string>();   // 编队选中的 3 只
         bool battleStarted;
@@ -964,6 +965,41 @@ namespace LingJing.UI
             {
                 AddLog("这场没有掉落");
             }
+
+            // 闭环：结算后给一个回主菜单的出口（v0.1 之前结算完就停在这儿，没法再开一局）
+            if (menuBackButton == null)
+            {
+                menuBackButton = MakeButton(canvasRect, "MenuBack", "回主菜单", new Vector2(0f, -150f), new Vector2(280f, 74f));
+                var mrt = menuBackButton.GetComponent<RectTransform>();
+                mrt.anchorMin = new Vector2(0.5f, 0.5f);
+                mrt.anchorMax = new Vector2(0.5f, 0.5f);
+                mrt.pivot = new Vector2(0.5f, 0.5f);
+                mrt.anchoredPosition = new Vector2(0f, -150f);
+
+                // 运行时新建的按钮，ColorBlock 的首次着色没生效（截出来是一块纯白）。
+                // 这里把底色写死、四个状态色都设白，等于只靠 Image.color 出颜色。
+                var mbImg = menuBackButton.GetComponent<Image>();
+                if (mbImg != null) mbImg.color = new Color(0.22f, 0.30f, 0.40f, 1f);
+                var mcb = menuBackButton.colors;
+                mcb.normalColor = Color.white;
+                mcb.highlightedColor = new Color(1.25f, 1.25f, 1.25f, 1f);
+                mcb.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
+                mcb.selectedColor = Color.white;
+                mcb.disabledColor = Color.white;
+                menuBackButton.colors = mcb;
+                var mblbl = menuBackButton.GetComponentInChildren<Text>();
+                if (mblbl != null) { mblbl.color = Color.white; mblbl.fontSize = 26; }
+
+                menuBackButton.onClick.AddListener(BackToMenu);
+            }
+            menuBackButton.gameObject.SetActive(true);
+        }
+
+        void BackToMenu()
+        {
+            const string menuScene = "MainMenu";
+            if (Application.CanStreamedLevelBeLoaded(menuScene)) UnityEngine.SceneManagement.SceneManager.LoadScene(menuScene);
+            else Debug.LogWarning("[BattleHud] MainMenu 不在 Build Settings，先跑一次「灵境/生成 主菜单场景」");
         }
 
         /// <summary>往战斗日志尾部追加一行（日志面板只保留最近 22 行）。</summary>
