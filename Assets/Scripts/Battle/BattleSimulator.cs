@@ -250,11 +250,18 @@ namespace LingJing.Battle
             return BuildResult(timedOut);
         }
 
+        /// <summary>回合硬上限打满：回合数超过上限而敌方还有活口 = 判负（2026-11-01 用户定）。</summary>
+        public bool RoundLimitReached
+        {
+            get { return config.maxRounds > 0 && round > config.maxRounds; }
+        }
+
         public bool IsBattleOver
         {
             get
             {
                 if (Alive(Side.Player).Count == 0) return true;
+                if (RoundLimitReached) return true;          // 20 回合没清完 → 结束（按失败结算）
                 if (Alive(Side.Enemy).Count > 0) return false;
                 // 敌方空了：还有后续波就不算结束
                 return currentWave + 1 >= waves.Count;

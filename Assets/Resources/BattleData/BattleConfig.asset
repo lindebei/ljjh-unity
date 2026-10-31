@@ -95,3 +95,4 @@ MonoBehaviour:
   - 1
   levelBandMaxEnemies: 020000000300000004000000
   timeCapSeconds: 900
+  maxRounds: 20

@@ -22,6 +22,7 @@ public static class BattleAutoShot
     static int phase;
     static int waitFrames;
     static int exitCountdown;
+    static bool equipShotTaken;
     static double startedAt;
     static float waitStartedAt;
 
@@ -38,6 +39,13 @@ public static class BattleAutoShot
     public static void RunWaves()
     {
         ScenePath = "Assets/Scenes/BattleWaves.unity";
+        Run();
+    }
+
+    /// <summary>换装界面单独截一张：进 Play 2 秒后抓图就退出，不依赖战斗状态。</summary>
+    public static void RunEquip()
+    {
+        ScenePath = "Assets/Scenes/EquipScreen.unity";
         Run();
     }
 
@@ -95,7 +103,26 @@ public static void Run()
         }
 
         var hud = Hud();
-        if (hud == null) return;
+        // 换装界面没有 BattleHud：等界面搭完（90 帧）截一张，确认文件真的落盘再退
+        if (hud == null)
+        {
+            if (frames >= 90 && !equipShotTaken)
+            {
+                Capture("equip_01.png");
+                equipShotTaken = true;
+                waitFrames = 0;
+            }
+            if (equipShotTaken)
+            {
+                waitFrames++;
+                if (File.Exists(OutDir + "/equip_01.png") || waitFrames > 240)
+                {
+                    Debug.Log("[BattleAutoShot] 换装截图落盘：" + File.Exists(OutDir + "/equip_01.png"));
+                    exitCountdown = 30;
+                }
+            }
+            return;
+        }
 
         var sim = hud.Simulator;
         if (sim == null) return;
@@ -198,6 +225,10 @@ public static void Run()
     static void Capture(string name)
     {
         string path = OutDir + "/" + name;
+
+        // 只用异步 CaptureScreenshot：同步的 CaptureScreenshotAsTexture 在 D3D12 下
+        // 直接把编辑器干崩了（CheckDeviceStatus → LaunchBugReporter），别再试。
+        // 异步版本是「本帧末写盘」，所以调用后要么等够帧数、要么等文件真的出现再退出。
         ScreenCapture.CaptureScreenshot(path);
         Debug.Log("[BattleAutoShot] 截图 " + path + " frame=" + frames);
 

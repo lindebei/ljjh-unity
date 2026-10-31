@@ -85,6 +85,9 @@ namespace LingJing.Data
         [Header("战斗时长上限（秒，防死循环）")]
         public float timeCapSeconds = 900f;
 
+        /// <summary>回合硬上限：打到第 maxRounds 回合结束还没清完所有怪，直接判负。</summary>
+        public int maxRounds = 20;
+
         /// <summary>等级差 → 命中率（超范围按两端取）。</summary>
         public float HitChance(int levelDiff)
         {

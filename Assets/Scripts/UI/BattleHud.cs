@@ -247,9 +247,11 @@ namespace LingJing.UI
                 var def = BattleDatabase.GetCreature(players[i]);
                 if (def == null) { Debug.LogError("[BattleHud] 缺少 " + players[i]); return; }
 
-                // 装备还没有换装界面，先给个整体开关：开了就五件全穿，方便看战力与胜率差
+                // 装备：换装界面存了什么就穿什么；一件都没配时才退回「满配开关」
                 EquipmentLoadout gear = null;
-                if (equipFullSet)
+                var preset = EquipmentPresets.Get(players[i]);
+                if (!preset.IsEmpty()) gear = preset;
+                else if (equipFullSet)
                 {
                     gear = new EquipmentLoadout();
                     string[] gearIds = { "eq_wpn", "eq_arm", "eq_trk", "eq_bts", "eq_tot" };
@@ -636,9 +638,11 @@ namespace LingJing.UI
             }
 
             spiritText.text = sim.WaveTotal > 1
-                ? string.Format("灵能 {0}/{1}     回合 {2}     第 {3}/{4} 波",
-                    sim.spirit, sim.config.spiritMax, sim.round, sim.currentWave + 1, sim.WaveTotal)
-                : string.Format("灵能 {0}/{1}     回合 {2}", sim.spirit, sim.config.spiritMax, sim.round);
+                ? string.Format("灵能 {0}/{1}     回合 {2}/{3}     第 {4}/{5} 波",
+                    sim.spirit, sim.config.spiritMax, Mathf.Min(sim.round, sim.config.maxRounds), sim.config.maxRounds,
+                    sim.currentWave + 1, sim.WaveTotal)
+                : string.Format("灵能 {0}/{1}     回合 {2}/{3}",
+                    sim.spirit, sim.config.spiritMax, Mathf.Min(sim.round, sim.config.maxRounds), sim.config.maxRounds);
             potionText.text = string.Format("药品 {0}", sim.potions);
 
             RefreshLog();

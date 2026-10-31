@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/EquipScreen.unity
+    guid: 835f9d0c17cd5474bbe613bab85d333f
+  - enabled: 1
     path: Assets/Scenes/BattlePrototype.unity
     guid: 657866ebb4e09ea43ba4aab08fb2a463
   m_configObjects: {}

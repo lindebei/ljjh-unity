@@ -124,6 +124,24 @@ namespace LingJing.Battle
             return Equipments.TryGetValue(id, out e) ? e : null;
         }
 
+        /// <summary>某槽位下所有可用装备（换装界面用）。按 id 排序，保证界面顺序稳定。</summary>
+        public static List<EquipmentDefinition> GetEquipmentsBySlot(EquipSlot slot)
+        {
+            var list = new List<EquipmentDefinition>();
+            foreach (var kv in Equipments)
+                if (kv.Value.slot == slot) list.Add(kv.Value);
+            list.Sort((a, b) => string.CompareOrdinal(a.id, b.id));
+            return list;
+        }
+
+        public static List<EquipmentDefinition> GetAllEquipments()
+        {
+            var list = new List<EquipmentDefinition>();
+            foreach (var kv in Equipments) list.Add(kv.Value);
+            list.Sort((a, b) => string.CompareOrdinal(a.id, b.id));
+            return list;
+        }
+
         public static List<CreatureDefinition> GetEnemies()
         {
             var list = new List<CreatureDefinition>();
