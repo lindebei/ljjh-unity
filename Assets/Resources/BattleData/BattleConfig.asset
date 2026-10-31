@@ -47,7 +47,7 @@ MonoBehaviour:
   potionsPerBattle: 8
   potionHealPercent: 0.35
   potionTriggerHpPercent: 0.35
-  playerActionsPerRound: 4
+  playerActionsPerRound: 3
   healTalentConstant: 250
   healSecondRatio: 0.5
   shieldTempDuration: 3
