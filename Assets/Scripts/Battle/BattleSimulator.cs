@@ -736,6 +736,10 @@ namespace LingJing.Battle
         /// <summary>有人开始放技能时广播（UI 用来播技能名横幅、让出手者的卡抖动一下）。</summary>
         public event System.Action<BattleUnit, SkillDefinition> ActionStarted;
 
+        /// <summary>调试用：整场跑下来全体技能被放了几次（清场效率旋钮是否真的生效）。</summary>
+        public static int aoeCastCount;
+        public static float lastAoeScale = -1f;
+
         public void Cast(BattleUnit actor, SkillDefinition skill, List<BattleUnit> targets)
         {
             if (skill == null) return;
@@ -800,12 +804,17 @@ namespace LingJing.Battle
                 var enemies = skill.targetSide == TargetSide.AllEnemies ? Alive(Side.Enemy) : targets;
                 if (enemies.Count > 0)
                 {
+                    // 全体技能额外吃一个「清场效率」系数（config.aoeDamageScale）：
+                    // 20→30 回合上限那轮发现波次战打不完，靠这个旋钮提效率，不去改设计文档里的技能倍率
+                    float scale = skill.targetSide == TargetSide.AllEnemies ? config.aoeDamageScale : 1f;
+                    if (scale != 1f) { aoeCastCount++; lastAoeScale = scale; }
+
                     int seg = Mathf.Max(1, skill.segments);
                     for (int s = 0; s < seg; s++)
                     {
                         var t = enemies[skill.spreadSegments ? s % enemies.Count : 0];
                         if (t == null || !t.IsAlive) continue;
-                        float dealt = calc.Apply(actor, t, skill.multiplier);
+                        float dealt = calc.Apply(actor, t, skill.multiplier * scale);
                         if (skill.appliedStatus != StatusType.None && skill.dotStacks > 0)
                             t.ApplyStatus(skill.appliedStatus, skill.dotStacks, config.dotDuration, 0f, config.dotMaxStacks);
                         if (skill.gaugePushbackPercent > 0f)

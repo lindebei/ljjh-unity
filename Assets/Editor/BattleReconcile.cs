@@ -164,12 +164,129 @@ public static class BattleReconcile
 
     static List<BattleResult> Batch(BattleConfig baseCfg, Scenario sc, bool expected, int runs)
     {
+        return Batch(baseCfg, sc, expected, runs, baseCfg.aoeDamageScale);
+    }
+
+    /// <summary>扫 aoeDamageScale：只跑指定的几个场景，输出胜率/回合/时长，用来给清场效率选值。</summary>
+    public static void SweepAoe()
+    {
+        float[] scales = { 1.0f, 1.5f, 2.0f, 2.5f, 3.0f };
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("# aoeDamageScale 扫描（同级 lv10，随机 200 场，上限 30 回合）");
+
+        var configs = new List<Scenario>
+        {
+            new Scenario("波次 4+4 (总8)", W(new[] { "en_bonefish", "en_stonelizard", "en_rat", "en_bear" },
+                                            new[] { "en_firetiger", "en_graywolf", "en_bonefish", "en_rat" }), 10, 10),
+            new Scenario("波次 4+3+3 (总10)", W(new[] { "en_bonefish", "en_stonelizard", "en_rat", "en_bear" },
+                                                new[] { "en_firetiger", "en_graywolf", "en_bonefish" },
+                                                new[] { "en_fox", "en_bird", "en_rat" }), 10, 10),
+            new Scenario("同级 精英x2 · lv11", W(new[] { "en_bird", "en_tigerking" }), 11, 10),
+            new Scenario("同级 小Boss · lv16", W(new[] { "en_snake" }), 16, 16, false),
+        };
+
+        var baseCfg = BattleDatabase.Config;
+        for (int s = 0; s < scales.Length; s++)
+        {
+            for (int c = 0; c < configs.Count; c++)
+            {
+                var res = Batch(baseCfg, configs[c], false, 200, scales[s]);
+                var ag = Aggregate2(res);
+                sb.AppendLine(string.Format("scale={0:F2}\taoe次数={7}\t{1}\t胜率 {2:P0}\t回合 {3:F1}\t时长 {4:F0}s\t我方剩血 {5:P0}\t敌方剩血 {6:P0}",
+                    scales[s], configs[c].name, ag.winRate, ag.avgRounds, ag.avgDuration, ag.avgPlayerHp, ag.avgEnemyHp, BattleSimulator.aoeCastCount));
+            }
+            sb.AppendLine();
+        }
+
+        System.IO.File.WriteAllText("D:/ljjh/tmp/sweep_aoe.txt", sb.ToString(), new System.Text.UTF8Encoding(false));
+        Debug.Log("[BattleReconcile] aoe 扫描完成 -> D:/ljjh/tmp/sweep_aoe.txt");
+    }
+
+
+    /// <summary>扫「每回合我方行动次数」：清场效率的第二个旋钮。</summary>
+    public static void SweepActions()
+    {
+        int[] acts = { 3, 4, 5 };
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("# playerActionsPerRound 扫描（aoeDamageScale 取配置值，随机 200 场，上限 30 回合）");
+
+        var configs = new List<Scenario>
+        {
+            new Scenario("波次 4+4 (总8)", W(new[] { "en_bonefish", "en_stonelizard", "en_rat", "en_bear" },
+                                            new[] { "en_firetiger", "en_graywolf", "en_bonefish", "en_rat" }), 10, 10),
+            new Scenario("波次 4+3+3 (总10)", W(new[] { "en_bonefish", "en_stonelizard", "en_rat", "en_bear" },
+                                                new[] { "en_firetiger", "en_graywolf", "en_bonefish" },
+                                                new[] { "en_fox", "en_bird", "en_rat" }), 10, 10),
+            new Scenario("上限 普2+精2 · lv10", W(new[] { "en_rat", "en_bear", "en_bird", "en_fox" }), 10),
+            new Scenario("同级 精英x2 · lv11", W(new[] { "en_bird", "en_fox" }), 11, 10),
+            new Scenario("同级 小Boss · lv16", W(new[] { "en_jelly" }), 16, 16),
+        };
+
+        var baseCfg = BattleDatabase.Config;
+        for (int a = 0; a < acts.Length; a++)
+        {
+            for (int c = 0; c < configs.Count; c++)
+            {
+                var res = Batch2(baseCfg, configs[c], 200, acts[a]);
+                var ag = Aggregate2(res);
+                sb.AppendLine(string.Format("行动={0}\t{1}\t胜率 {2:P0}\t回合 {3:F1}\t时长 {4:F0}s\t我方剩血 {5:P0}\t敌方剩血 {6:P0}",
+                    acts[a], configs[c].name, ag.winRate, ag.avgRounds, ag.avgDuration, ag.avgPlayerHp, ag.avgEnemyHp));
+            }
+            sb.AppendLine();
+        }
+
+        System.IO.File.WriteAllText("D:/ljjh/tmp/sweep_actions.txt", sb.ToString(), new System.Text.UTF8Encoding(false));
+        Debug.Log("[BattleReconcile] 行动次数扫描完成 -> D:/ljjh/tmp/sweep_actions.txt");
+    }
+
+    static List<BattleResult> Batch2(BattleConfig baseCfg, Scenario sc, int runs, int actions)
+    {
+        var results = new List<BattleResult>(runs);
+        for (int i = 0; i < runs; i++)
+        {
+            var cfg = UnityEngine.Object.Instantiate(baseCfg);
+            cfg.useExpectedValue = false;
+            cfg.playerActionsPerRound = actions;
+            try
+            {
+                var r = RunOne(cfg, sc, 1000 + i);
+                if (r != null) results.Add(r.Value);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(cfg); }
+        }
+        return results;
+    }
+    static Aggregate Aggregate2(List<BattleResult> results)
+    {
+        var ag = new Aggregate();
+        if (results.Count == 0) return ag;
+        int wins = 0;
+        float sumRounds = 0f, sumDur = 0f, sumPhp = 0f, sumEhp = 0f;
+        for (int i = 0; i < results.Count; i++)
+        {
+            var r = results[i];
+            if (r.playerHpPercent > 0f && r.enemyHpPercent <= 0.0001f) wins++;
+            sumRounds += r.rounds; sumDur += r.durationSeconds;
+            sumPhp += r.playerHpPercent; sumEhp += r.enemyHpPercent;
+        }
+        ag.runs = results.Count;
+        ag.winRate = (float)wins / results.Count;
+        ag.avgRounds = sumRounds / results.Count;
+        ag.avgDuration = sumDur / results.Count;
+        ag.avgPlayerHp = sumPhp / results.Count;
+        ag.avgEnemyHp = sumEhp / results.Count;
+        return ag;
+    }
+
+    static List<BattleResult> Batch(BattleConfig baseCfg, Scenario sc, bool expected, int runs, float aoeScale)
+    {
         var results = new List<BattleResult>(runs);
         for (int i = 0; i < runs; i++)
         {
             // BattleConfig 是 ScriptableObject，直接改会污染资源；这里用副本+克隆字段的方式避免。
             var cfg = UnityEngine.Object.Instantiate(baseCfg);
             cfg.useExpectedValue = expected;
+            cfg.aoeDamageScale = aoeScale;
             try
             {
                 var r = RunOne(cfg, sc, 1000 + i);

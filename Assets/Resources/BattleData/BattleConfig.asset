@@ -47,7 +47,7 @@ MonoBehaviour:
   potionsPerBattle: 8
   potionHealPercent: 0.35
   potionTriggerHpPercent: 0.35
-  playerActionsPerRound: 3
+  playerActionsPerRound: 4
   healTalentConstant: 250
   healSecondRatio: 0.5
   shieldTempDuration: 3
@@ -82,6 +82,7 @@ MonoBehaviour:
   - 2.3
   - 2.7
   - 3.1
+  aoeDamageScale: 2
   waveClearHealPercent: 0.12
   waveClearSpirit: 2
   levelBandUpper: 050000000c00000018000000
@@ -95,4 +96,4 @@ MonoBehaviour:
   - 1
   levelBandMaxEnemies: 020000000300000004000000
   timeCapSeconds: 900
-  maxRounds: 20
+  maxRounds: 30

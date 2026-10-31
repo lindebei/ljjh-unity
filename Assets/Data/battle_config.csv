@@ -17,7 +17,7 @@ gaugeThreshold,100
 potionsPerBattle,8
 potionHealPercent,0.35
 potionTriggerHpPercent,0.35
-playerActionsPerRound,3
+playerActionsPerRound,4
 healTalentConstant,250
 healSecondRatio,0.5
 timeCapSeconds,900
@@ -25,4 +25,5 @@ enemyPowerScale,1.0
 waveClearHealPercent,0.12
 waveClearSpirit,2
 qualityPowerScale,1.0|2.10|2.30|2.70|3.10
-maxRounds,20
+maxRounds,30
+aoeDamageScale,2.0

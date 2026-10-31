@@ -73,6 +73,9 @@ namespace LingJing.Data
         // 用户口径：普通怪满波次可以 100%；精英满波次无装备 70–80%；Boss 无装备 40%。
         public float[] qualityPowerScale = { 1.0f, 1.70f, 3.20f, 3.60f, 4.00f };
 
+        /// <summary>全体技能（AoE）的伤害额外倍率。提清场效率用，不动 skills.csv 的设计倍率。</summary>
+        public float aoeDamageScale = 1f;
+
         public float waveClearHealPercent = 0.12f;
         public int waveClearSpirit = 2;
 
@@ -86,7 +89,7 @@ namespace LingJing.Data
         public float timeCapSeconds = 900f;
 
         /// <summary>回合硬上限：打到第 maxRounds 回合结束还没清完所有怪，直接判负。</summary>
-        public int maxRounds = 20;
+        public int maxRounds = 30;
 
         /// <summary>等级差 → 命中率（超范围按两端取）。</summary>
         public float HitChance(int levelDiff)

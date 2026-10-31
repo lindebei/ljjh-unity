@@ -272,6 +272,8 @@ public static class BattleCsvImporter
         }
         cfg.waveClearHealPercent = GetFloat(map, "waveClearHealPercent", cfg.waveClearHealPercent);
         cfg.waveClearSpirit = GetInt(map, "waveClearSpirit", cfg.waveClearSpirit);
+        cfg.maxRounds = GetInt(map, "maxRounds", cfg.maxRounds);
+        cfg.aoeDamageScale = GetFloat(map, "aoeDamageScale", cfg.aoeDamageScale);
         EditorUtility.SetDirty(cfg);
     }
 
