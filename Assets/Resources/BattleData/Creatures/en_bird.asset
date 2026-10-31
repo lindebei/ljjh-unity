@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15110c512158aa543aead707dd125396, type: 3}
+  m_Name: en_bird
+  m_EditorClassIdentifier: Assembly-CSharp::LingJing.Data.CreatureDefinition
+  id: en_bird
+  displayName: "\u65AD\u7FFC\u9E1F"
+  element: 2
+  isPlayerBeast: 0
+  baseStats:
+    atk: 95
+    def: 35
+    spd: 90
+    vit: 110
+    spr: 50
+    tal: 70
+  potentials:
+    atk: 1
+    def: 1
+    spd: 1
+    vit: 1
+    spr: 1
+    tal: 1
+  skills:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  quality: 1
+  enemySkillSet: Wind
+  placeholderColor: {r: 1, g: 1, b: 1, a: 1}

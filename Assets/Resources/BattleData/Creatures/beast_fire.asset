@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15110c512158aa543aead707dd125396, type: 3}
+  m_Name: beast_fire
+  m_EditorClassIdentifier: Assembly-CSharp::LingJing.Data.CreatureDefinition
+  id: beast_fire
+  displayName: "\u706B\u7075"
+  element: 1
+  isPlayerBeast: 1
+  baseStats:
+    atk: 90
+    def: 40
+    spd: 55
+    vit: 150
+    spr: 70
+    tal: 45
+  potentials:
+    atk: 2.4
+    def: 1.07
+    spd: 1.47
+    vit: 2
+    spr: 1.87
+    tal: 1.2
+  skills:
+  - {fileID: 11400000, guid: 6b7e2ccbc4f987345a41b0a04f7b65a3, type: 2}
+  - {fileID: 11400000, guid: 70d9619793ef7784592f40c61614793c, type: 2}
+  - {fileID: 11400000, guid: a43465952f46fb64c81a5cfbef80fced, type: 2}
+  - {fileID: 11400000, guid: 9e678ecf7fc5120408ecc5d9a77a656d, type: 2}
+  quality: 0
+  enemySkillSet: 
+  placeholderColor: {r: 1, g: 1, b: 1, a: 1}

@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 95125eec6bcf9c343b9e8667063a46cd, type: 3}
+  m_Name: en_fire_ult
+  m_EditorClassIdentifier: Assembly-CSharp::LingJing.Data.SkillDefinition
+  id: en_fire_ult
+  displayName: "\u711A\u810A"
+  type: 3
+  element: 1
+  spiritCost: 0
+  cooldown: 4
+  multiplier: 3.8
+  segments: 1
+  spreadSegments: 0
+  targetSide: 0
+  targetCount: 1
+  requiresHitCheck: 1
+  appliedStatus: 5
+  dotStacks: 4
+  controlChance: 0
+  controlDuration: 0
+  gaugePushbackPercent: 0
+  taunt: 0
+  selfAppliesStatus: 0
+  isHeal: 0
+  isShield: 0
+  shieldPercent: 0
+  dispelOne: 0
+  healAllAllies: 0
+  buffPercent: 0
+  buffDuration: 0
+  buffStatus: 0
+  buffIsAttack: 0
+  vfxKey: 

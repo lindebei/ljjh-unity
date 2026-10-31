@@ -1,0 +1,5 @@
+element,basic,active,aoe,ultimate,ultUnlock,ultCd,activeChance,aoeChance
+Water,en_water_basic,en_water_active,en_water_aoe,en_water_ult,0.30,4,0.60,0.70
+Fire,en_fire_basic,en_fire_active,en_fire_aoe,en_fire_ult,0.30,4,0.60,0.70
+Wind,en_wind_basic,en_wind_active,en_wind_aoe,en_wind_ult,0.30,4,0.60,0.70
+Earth,en_earth_basic,en_earth_active,en_earth_aoe,en_earth_ult,0.30,4,0.60,0.70

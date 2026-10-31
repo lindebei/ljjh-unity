@@ -1,0 +1,5 @@
+id,name,element,atk,def,spd,vit,spr,tal,pAtk,pDef,pSpd,pVit,pSpr,pTal,sBasic,sActive,sSupport,sUlt
+beast_water,水灵,Water,30,60,60,150,65,85,0.80,1.60,1.60,2.00,1.73,2.27,w_basic,w_active,w_support,w_ult
+beast_fire,火灵,Fire,90,40,55,150,70,45,2.40,1.07,1.47,2.00,1.87,1.20,f_basic,f_active,f_support,f_ult
+beast_wind,风灵,Wind,45,40,95,125,85,60,1.16,1.03,2.45,1.61,2.19,1.55,a_basic,a_active,a_support,a_ult
+beast_earth,土灵,Earth,35,80,30,180,75,50,0.97,2.22,0.83,2.50,2.08,1.39,e_basic,e_active,e_support,e_ult

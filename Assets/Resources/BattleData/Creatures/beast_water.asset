@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15110c512158aa543aead707dd125396, type: 3}
+  m_Name: beast_water
+  m_EditorClassIdentifier: Assembly-CSharp::LingJing.Data.CreatureDefinition
+  id: beast_water
+  displayName: "\u6C34\u7075"
+  element: 0
+  isPlayerBeast: 1
+  baseStats:
+    atk: 30
+    def: 60
+    spd: 60
+    vit: 150
+    spr: 65
+    tal: 85
+  potentials:
+    atk: 0.8
+    def: 1.6
+    spd: 1.6
+    vit: 2
+    spr: 1.73
+    tal: 2.27
+  skills:
+  - {fileID: 11400000, guid: 253143194e53e154885b4c3748242c6b, type: 2}
+  - {fileID: 11400000, guid: e5fb994c5db4711449e3a220ec79b7e1, type: 2}
+  - {fileID: 11400000, guid: 4b236fe536dd7ae429d3614a0b336b79, type: 2}
+  - {fileID: 11400000, guid: fbe559f7b57e26945bec520c8d2f80d2, type: 2}
+  quality: 0
+  enemySkillSet: 
+  placeholderColor: {r: 1, g: 1, b: 1, a: 1}
