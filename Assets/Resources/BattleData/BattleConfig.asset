@@ -78,7 +78,7 @@ MonoBehaviour:
   enemyPowerScale: 1
   qualityPowerScale:
   - 1
-  - 2.15
+  - 2.1
   - 2.3
   - 2.7
   - 3.1

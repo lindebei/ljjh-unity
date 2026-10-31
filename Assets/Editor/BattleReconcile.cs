@@ -74,6 +74,11 @@ public static class BattleReconcile
                 new[] { "en_bonefish", "en_stonelizard", "en_rat", "en_bear" },
                 new[] { "en_firetiger", "en_graywolf", "en_bonefish" },
                 new[] { "en_stonelizard", "en_rat", "en_firetiger" }), 10, 10),
+            // ── 带装备口径：满配（5 件紫 + 强化 3）对照，验收标准是「同级小 Boss ≥90%」 ──
+            new Scenario("同级 普通x4 · lv10 +满配", W(new[] { "en_bonefish", "en_stonelizard", "en_rat", "en_bear" }), 10, 10, true),
+            new Scenario("同级 精英x2 · lv11 +满配", W(new[] { "en_bird", "en_fox" }), 11, 10, true),
+            new Scenario("同级 小Boss · lv16 +满配", W(new[] { "en_jelly" }), 16, 16, true),
+
             // 超出设计的压力档：同屏 10 只（没有波次），只用来确认护栏有效
             new Scenario("压力 同屏x10 · lv10", W(new[] {
                 "en_bonefish", "en_stonelizard", "en_rat", "en_firetiger", "en_graywolf",
@@ -105,6 +110,7 @@ public static class BattleReconcile
         public int enemyLevel;
         public int playerLevel;       // 我方等级（真实一境是同级推进，只有同级的胜率才有意义）
         public int[] freePoints;      // 按 playerLevel 给：每级 6 点，六项均分
+        public bool geared;           // 是否穿满配紫装（5 件 + 强化 3）
 
         public Scenario(string name, string[][] waves, int enemyLevel, int playerLevel)
         {
@@ -114,7 +120,11 @@ public static class BattleReconcile
             this.playerLevel = playerLevel;
             int per = (playerLevel - 1) * 6 / 6;      // 每级 6 点自由点，均分到六项
             this.freePoints = new[] { per, per, per, per, per, per };
+            this.geared = false;
         }
+
+        public Scenario(string name, string[][] waves, int enemyLevel, int playerLevel, bool geared)
+            : this(name, waves, enemyLevel, playerLevel) { this.geared = geared; }
 
         public Scenario(string name, string[][] waves, int enemyLevel)
             : this(name, waves, enemyLevel, PlayerLevel) { }
@@ -163,7 +173,7 @@ public static class BattleReconcile
         {
             var def = BattleDatabase.GetCreature(Players[i]);
             if (def == null) { Debug.LogError("[BattleReconcile] 缺 " + Players[i]); return null; }
-            sim.AddPlayer(def, sc.playerLevel, sc.freePoints);
+            sim.AddPlayer(def, sc.playerLevel, sc.freePoints, sc.geared ? FullGear() : null);
         }
 
         int band = cfg.BandIndex(sc.enemyLevel);
@@ -181,6 +191,24 @@ public static class BattleReconcile
 
         sim.Begin();
         return sim.Run();
+    }
+
+    static readonly string[] FullSetIds =
+    {
+        "eq_wpn_purple", "eq_arm_purple", "eq_trk_purple", "eq_bts_purple", "eq_tot_purple"
+    };
+
+    /// <summary>满配：5 件紫装（CSV 里 enhance=3）。每只兽各一套。</summary>
+    static EquipmentLoadout FullGear()
+    {
+        var lo = new EquipmentLoadout();
+        for (int i = 0; i < FullSetIds.Length; i++)
+        {
+            var eq = BattleDatabase.GetEquipment(FullSetIds[i]);
+            if (eq == null) { Debug.LogError("[BattleReconcile] 缺装备 " + FullSetIds[i] + "，先跑 灵境/导入战斗数据。"); continue; }
+            lo.Set(eq);
+        }
+        return lo;
     }
 
     static Aggregate Agg(List<BattleResult> rs)

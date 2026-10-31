@@ -16,6 +16,7 @@ namespace LingJing.Battle
         static Dictionary<string, SkillDefinition> skillCache;
         static Dictionary<string, CreatureDefinition> creatureCache;
         static Dictionary<Element, EnemySkillSet> setCache;
+        static Dictionary<string, EquipmentDefinition> equipCache;
         static BattleConfig configCache;
 
         public static void ClearCache()
@@ -24,6 +25,7 @@ namespace LingJing.Battle
             creatureCache = null;
             setCache = null;
             configCache = null;
+            equipCache = null;
         }
 
         public static BattleConfig Config
@@ -100,6 +102,26 @@ namespace LingJing.Battle
             if (Sets.TryGetValue(element, out s)) return s;
             Debug.LogWarning("[BattleDatabase] 没有 " + element + " 属性的敌方技能组，敌人将只会普攻。");
             return null;
+        }
+
+        static Dictionary<string, EquipmentDefinition> Equipments
+        {
+            get
+            {
+                if (equipCache == null)
+                {
+                    equipCache = new Dictionary<string, EquipmentDefinition>();
+                    var all = Resources.LoadAll<EquipmentDefinition>(Root + "Equipment");
+                    for (int i = 0; i < all.Length; i++) equipCache[all[i].id] = all[i];
+                }
+                return equipCache;
+            }
+        }
+
+        public static EquipmentDefinition GetEquipment(string id)
+        {
+            EquipmentDefinition e;
+            return Equipments.TryGetValue(id, out e) ? e : null;
         }
 
         public static List<CreatureDefinition> GetEnemies()

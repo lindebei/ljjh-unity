@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6d9f174913ef88469db2d824a34e6ed, type: 3}
+  m_Name: eq_wpn_blue
+  m_EditorClassIdentifier: Assembly-CSharp::LingJing.Data.EquipmentDefinition
+  id: eq_wpn_blue
+  displayName: "\u6C34\u7EB9\u77ED\u5203"
+  slot: 0
+  quality: 2
+  mainStat: 0
+  mainValue: 16
+  enhance: 0
+  subs:
+  - stat: 0
+    percent: 0.05
+  - stat: 2
+    percent: 0.03
+  spiritMaxBonus: 0

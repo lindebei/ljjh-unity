@@ -19,6 +19,7 @@ public static class BattleCsvImporter
     const string SkillsDir = OutRoot + "/Skills";
     const string CreaturesDir = OutRoot + "/Creatures";
     const string SetsDir = OutRoot + "/EnemySkillSets";
+    const string EquipDir = OutRoot + "/Equipment";
 
     [MenuItem("灵境/导入战斗数据 (CSV → SO)")]
     public static void ImportAll()
@@ -29,10 +30,69 @@ public static class BattleCsvImporter
         ImportCreatures(skills);
         ImportEnemySkillSets(skills);
         ImportBattleConfig();
+        int equipCount = ImportEquipment();
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log(string.Format("[BattleCsvImporter] 导入完成：{0} 个技能、{1} 张兽/怪、4 组敌方技能、1 份配置。", skills.Count, CountAssets<CreatureDefinition>(CreaturesDir)));
+        Debug.Log(string.Format("[BattleCsvImporter] 导入完成：{0} 个技能、{1} 张兽/怪、4 组敌方技能、1 份配置、{2} 件装备。", skills.Count, CountAssets<CreatureDefinition>(CreaturesDir), equipCount));
+    }
+
+    // ------------------------------------------------------------------ 装备
+
+    /// <summary>
+    /// equipment.csv 的主值只是「1 级基础值」，品质系数（1.0/1.3/1.6/2.0/2.6）在这里乘进去；
+    /// 强化系数（+8%/级）留到运行时 `MainValueAt(enhance)` 再乘，这样同一件装备强化升级不用重导。
+    /// </summary>
+    static int ImportEquipment()
+    {
+        string path = Path.Combine(CsvDir, "equipment.csv");
+        if (!File.Exists(path)) return 0;
+        var rows = ReadCsv(path);
+
+        for (int i = 0; i < rows.Count; i++)
+        {
+            var r = rows[i];
+            string id = Get(r, "id");
+            if (string.IsNullOrEmpty(id)) continue;
+
+            var so = Upsert<EquipmentDefinition>(EquipDir, id);
+            so.id = id;
+            so.displayName = Get(r, "name");
+            so.slot = (EquipSlot)Mathf.Clamp(GetInt(r, "slot"), 0, 4);
+            so.quality = Mathf.Clamp(GetInt(r, "quality"), 0, 4);
+            so.mainStat = ParseEnum<StatKind>(Get(r, "mainStat"), StatKind.Atk);
+            so.mainValue = GetFloat(r, "mainValue") * EquipmentDefinition.QualityCoeff[so.quality];
+            so.enhance = Mathf.Clamp(GetInt(r, "enhance"), 0, 5);
+            so.spiritMaxBonus = 0;
+            so.subs = new List<StatMod>();
+
+            string[] keys = { "sub1", "sub2", "sub3", "sub4" };
+            for (int k = 0; k < keys.Length; k++)
+            {
+                string raw = Get(r, keys[k]);
+                if (string.IsNullOrEmpty(raw)) continue;
+                int colon = raw.IndexOf(':');
+                if (colon <= 0) continue;
+                string key = raw.Substring(0, colon).Trim();
+                float val = 0f;
+                float.TryParse(raw.Substring(colon + 1).Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out val);
+                if (key == "spiritFlat") { so.spiritMaxBonus += Mathf.RoundToInt(val); continue; }
+                StatKind sk;
+                switch (key)
+                {
+                    case "atkPct": sk = StatKind.Atk; break;
+                    case "defPct": sk = StatKind.Def; break;
+                    case "spdPct": sk = StatKind.Spd; break;
+                    case "vitPct": sk = StatKind.Vit; break;
+                    case "sprPct": sk = StatKind.Spr; break;
+                    case "talPct": sk = StatKind.Tal; break;
+                    default: continue;
+                }
+                so.subs.Add(new StatMod { stat = sk, percent = val });
+            }
+            EditorUtility.SetDirty(so);
+        }
+        return CountAssets<EquipmentDefinition>(EquipDir);
     }
 
     // ------------------------------------------------------------------ 技能
@@ -212,6 +272,7 @@ public static class BattleCsvImporter
         EnsureFolder(OutRoot, "Skills");
         EnsureFolder(OutRoot, "Creatures");
         EnsureFolder(OutRoot, "EnemySkillSets");
+        EnsureFolder(OutRoot, "Equipment");
     }
 
     static void EnsureFolder(string parent, string child)

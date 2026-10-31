@@ -53,6 +53,13 @@ namespace LingJing.Battle
             }
         }
         readonly Dictionary<BattleUnit, int> focusThisRound = new Dictionary<BattleUnit, int>();
+        readonly Dictionary<BattleUnit, int> equipSpiritBonus = new Dictionary<BattleUnit, int>();
+
+        /// <summary>最近一次建队时读到的装备战力，供 UI / 对账报告显示。</summary>
+        public float lastEquipPower;
+
+        /// <summary>本场灵能上限 = 配置值 + 装备给的 +N（取全队最大）。</summary>
+        public int spiritMax;
 
         public BattleSimulator(BattleConfig config, int seed = 20261031)
         {
@@ -63,9 +70,15 @@ namespace LingJing.Battle
 
         // ------------------------------------------------------------------ 建队
 
-        public BattleUnit AddPlayer(CreatureDefinition def, int level, int[] freePoints)
+        public BattleUnit AddPlayer(CreatureDefinition def, int level, int[] freePoints, EquipmentLoadout loadout = null)
         {
             var s = BattleFormulas.PlayerStats(def.baseStats, level, def.potentials, freePoints);
+            int spiritBonus = 0;
+            if (loadout != null && !loadout.IsEmpty())
+            {
+                s = loadout.Apply(s, out spiritBonus);
+                lastEquipPower = loadout.Power();
+            }
             var u = new BattleUnit
             {
                 def = def,
@@ -80,6 +93,7 @@ namespace LingJing.Battle
                 maxHp = BattleFormulas.MaxHp(s.vit, level)
             };
             u.hp = u.maxHp;
+            equipSpiritBonus.Add(u, spiritBonus);
             units.Add(u);
             return u;
         }
@@ -125,6 +139,10 @@ namespace LingJing.Battle
         /// <summary>开场：算归一系数（我方开场速度均值，整场锁死）、灵能起手、药品数。</summary>
         public void Begin()
         {
+            // 灵能上限 = 配置 + 装备加成（全队取最大），必须在算初始灵能之前定下来
+            int bonus = 0;
+            foreach (var kv in equipSpiritBonus) if (kv.Value > bonus) bonus = kv.Value;
+            spiritMax = config.spiritMax + bonus;
             var players = Alive(Side.Player);
             float sumSpd = 0f, sumSpr = 0f;
             for (int i = 0; i < players.Count; i++)
@@ -151,7 +169,7 @@ namespace LingJing.Battle
             SpawnWave(0);
 
             Log(string.Format("开场：我方速度均值 {0:F0}，精神均值 {1:F0}，初始灵能 {2}/{3}，药品 {4} 个，共 {5} 波",
-                meanSpd, meanSpr, spirit, config.spiritMax, potions, Mathf.Max(1, waves.Count)));
+                meanSpd, meanSpr, spirit, spiritMax, potions, Mathf.Max(1, waves.Count)));
         }
 
         /// <summary>关闭当前波次：之后 AddEnemy 的敌人都归到下一波。</summary>
@@ -179,7 +197,7 @@ namespace LingJing.Battle
                     float heal = allies[i].maxHp * config.waveClearHealPercent;
                     if (heal > 0f) allies[i].Heal(heal);
                 }
-                spirit = Mathf.Min(config.spiritMax, spirit + config.waveClearSpirit);
+                spirit = Mathf.Min(spiritMax, spirit + config.waveClearSpirit);
                 Log(string.Format("第 {0}/{1} 波入场：{2} 只（我方回复 {3:P0} 生命、灵能 +{4}）",
                     index + 1, waves.Count, list.Count, config.waveClearHealPercent, config.waveClearSpirit));
             }
@@ -436,7 +454,7 @@ namespace LingJing.Battle
                 int regen = BattleFormulas.SpiritRegen(meanSpr);
                 if (regen > 0)
                 {
-                    spirit = Mathf.Min(config.spiritMax, spirit + regen);
+                    spirit = Mathf.Min(spiritMax, spirit + regen);
                     Log(string.Format("回合{0} 灵能自然回复 +{1} → {2}", round, regen, spirit));
                 }
             }
@@ -697,7 +715,7 @@ namespace LingJing.Battle
             if (ActionStarted != null) ActionStarted(actor, skill);
 
             // 灵能
-            if (skill.spiritCost < 0) spirit = Mathf.Min(config.spiritMax, spirit + 1);
+            if (skill.spiritCost < 0) spirit = Mathf.Min(spiritMax, spirit + 1);
             else spirit = Mathf.Max(0, spirit - skill.spiritCost);
 
             if (skill.cooldown > 0) actor.SetCooldown(skill.id, skill.cooldown);

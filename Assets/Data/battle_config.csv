@@ -1,4 +1,4 @@
-﻿key,value
+key,value
 attackK,3.6
 defConstant,300
 elementalAdvantage,1.25
@@ -24,4 +24,4 @@ timeCapSeconds,900
 enemyPowerScale,1.0
 waveClearHealPercent,0.12
 waveClearSpirit,2
-qualityPowerScale,1.0|2.15|2.30|2.70|3.10
+qualityPowerScale,1.0|2.10|2.30|2.70|3.10
