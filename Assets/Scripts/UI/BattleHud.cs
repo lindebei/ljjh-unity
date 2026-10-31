@@ -17,6 +17,8 @@ namespace LingJing.UI
         public int playerLevel = 24;
         public int enemyLevel = 10;
         public string[] enemyIds = { "en_bonefish", "en_stonelizard", "en_bird" };
+        [Tooltip("可选：第二波敌人 id。留空就是单波战斗。")]
+        public string[] enemyIdsWave2 = new string[0];
         public float timeScale = 1f;
         public bool autoBattle;
 
@@ -30,6 +32,7 @@ namespace LingJing.UI
         readonly Dictionary<BattleUnit, RectTransform> hpFills = new Dictionary<BattleUnit, RectTransform>();
         readonly Dictionary<BattleUnit, Text> hpTexts = new Dictionary<BattleUnit, Text>();
         readonly Dictionary<BattleUnit, RectTransform> gaugeFills = new Dictionary<BattleUnit, RectTransform>();
+        readonly Dictionary<BattleUnit, GameObject> gaugeRows = new Dictionary<BattleUnit, GameObject>();   // 未入场的波次整行藏起来
         readonly Dictionary<BattleUnit, Text> gaugeTexts = new Dictionary<BattleUnit, Text>();
         readonly Dictionary<BattleUnit, RectTransform> cardRects = new Dictionary<BattleUnit, RectTransform>();
         readonly Dictionary<BattleUnit, Image> cardImages = new Dictionary<BattleUnit, Image>();
@@ -243,18 +246,26 @@ namespace LingJing.UI
             }
 
             int band = cfg.BandIndex(enemyLevel);
-            for (int i = 0; i < enemyIds.Length; i++)
-            {
-                var def = BattleDatabase.GetCreature(enemyIds[i]);
-                if (def == null) { Debug.LogError("[BattleHud] 缺少 " + enemyIds[i]); continue; }
-                sim.AddEnemy(def, enemyLevel, band);
-            }
+            AddEnemyWave(band, enemyIds);
+            // 可选第二波：填了 enemyIdsWave2 就变成两波战斗（一波清完不判胜利）
+            if (enemyIdsWave2 != null && enemyIdsWave2.Length > 0) AddEnemyWave(band, enemyIdsWave2);
 
             sim.Begin();
             sim.ActionStarted += OnActionStarted;
             BuildUnitWidgets();
             RefreshAll();
             PrimeSkillLabels();
+        }
+
+        void AddEnemyWave(int band, string[] ids)
+        {
+            for (int i = 0; i < ids.Length; i++)
+            {
+                var def = BattleDatabase.GetCreature(ids[i]);
+                if (def == null) { Debug.LogError("[BattleHud] 缺少 " + ids[i]); continue; }
+                sim.AddEnemy(def, enemyLevel, band);
+            }
+            sim.EndWave();
         }
 
         /// <summary>
@@ -280,20 +291,35 @@ namespace LingJing.UI
 
         void BuildUnitWidgets()
         {
+            // 卡片宽度跟着「这一行有多少只」走：3 只以内 460（立绘 150 + 文字 278），
+            // 4–5 只压到 360，6 只以上压到 240 —— 不压的话 4 只就 1840 宽，直接溢出 1920 屏幕。
+            int enemyTotal = Mathf.Max(1, sim.MaxWaveSize);   // 按最大一波算宽度，波次不影响排版
+
+            float cardW = enemyTotal >= 6 ? 240f : (enemyTotal >= 4 ? 360f : 460f);
+            float cardH = enemyTotal >= 6 ? 170f : 190f;
+            float pcW = Mathf.Round(cardW * 0.326f);          // 立绘宽
+            float textW0 = cardW - pcW - 22f;                 // 文字列剩多少
+
             for (int i = 0; i < sim.units.Count; i++)
             {
                 var u = sim.units[i];
                 bool isPlayer = u.side == Side.Player;
                 var row = isPlayer ? playerRow : enemyRow;
 
+                // 我方固定 3 只，永远用满宽卡片
+                float cw = isPlayer ? 460f : cardW;
+                float ch = isPlayer ? 190f : cardH;
+                float pw = isPlayer ? 150f : pcW;
+                float tw = isPlayer ? 278f : textW0;
+
                 var card = MakePanel(row, "Card_" + u.id, isPlayer ? new Color(0.16f, 0.22f, 0.30f, 1f) : new Color(0.30f, 0.16f, 0.16f, 1f));
-                card.rectTransform.sizeDelta = new Vector2(460f, 190f);
+                card.rectTransform.sizeDelta = new Vector2(cw, ch);
                 cardRects[u] = card.rectTransform;
                 cardImages[u] = card;
                 cardBaseColors[u] = card.color;
                 var le = card.gameObject.AddComponent<LayoutElement>();
-                le.preferredWidth = 460f;
-                le.preferredHeight = 190f;
+                le.preferredWidth = cw;
+                le.preferredHeight = ch;
 
                 // 立绘：卡片左侧 150x150，等比缩放（没有图就只留空白，不影响其它布局）
                 var portrait = new GameObject("Portrait", typeof(Image)).GetComponent<Image>();
@@ -306,21 +332,21 @@ namespace LingJing.UI
                 prt.anchorMin = new Vector2(0f, 0f);
                 prt.anchorMax = new Vector2(0f, 0f);
                 prt.pivot = new Vector2(0f, 0f);
-                prt.sizeDelta = new Vector2(150f, 160f);
+                prt.sizeDelta = new Vector2(pw, ch - 30f);
                 prt.anchoredPosition = new Vector2(10f, 14f);
                 portraits[u] = portrait;
 
                 // 名字 + 血条排在立绘右边
-                var col = MakeColumn(card.transform, "Col", 8f, new RectOffset(170, 12, 16, 10), false);
-                MakeText(col, "Name", u.displayName + "   Lv" + u.level, 24, Color.white, TextAnchor.MiddleLeft,
-                    new Vector2(0f, 1f), new Vector2(278f, 30f), new Vector2(0f, 1f), Vector2.zero);
+                var col = MakeColumn(card.transform, "Col", 8f, new RectOffset((int)pw + 20, 12, 16, 10), false);
+                MakeText(col, "Name", u.displayName + "   Lv" + u.level, (!isPlayer && enemyTotal >= 6) ? 20 : 24,
+                    Color.white, TextAnchor.MiddleLeft, new Vector2(0f, 1f), new Vector2(tw, 30f), new Vector2(0f, 1f), Vector2.zero);
 
                 // 卡片宽 460，立绘占左侧 170（150 图 + 10 边距 + 10 间隙），文字区只剩 278 —— 这里的宽度必须跟着改，
                 // 不然血条会伸出卡片右边（childControlWidth=false 时布局不会帮你压窄）
-                var hpBar = MakeBar(col, "Hp", new Color(0.85f, 0.25f, 0.25f), 278f, 26f);
+                var hpBar = MakeBar(col, "Hp", new Color(0.85f, 0.25f, 0.25f), tw, 26f);
                 hpFills[u] = hpBar.Item2;
                 hpTexts[u] = MakeText(hpBar.Item1, "HpText", "", 17, Color.white, TextAnchor.MiddleCenter,
-                    new Vector2(0f, 0f), new Vector2(278f, 26f), new Vector2(0f, 0f), Vector2.zero);
+                    new Vector2(0f, 0f), new Vector2(tw, 26f), new Vector2(0f, 0f), Vector2.zero);
                 Stretch(hpTexts[u].rectTransform);
 
                 // 行动条（左侧竖排）
@@ -339,6 +365,7 @@ namespace LingJing.UI
 
                 var gBar = MakeBar(gRow.transform, "Gauge", isPlayer ? new Color(0.35f, 0.75f, 1f) : new Color(1f, 0.55f, 0.35f), 256f, 16f);
                 gaugeFills[u] = gBar.Item2;
+                gaugeRows[u] = gRow.gameObject;
                 var grt = gBar.Item1;
                 grt.anchorMin = new Vector2(0f, 0f);
                 grt.anchorMax = new Vector2(0f, 0f);
@@ -567,9 +594,22 @@ namespace LingJing.UI
                     // 倒下的立绘压暗，别让它在卡片里看着还活着
                     portraits[u].color = u.IsAlive ? Color.white : new Color(0.35f, 0.35f, 0.40f, 0.55f);
                 }
+
+                // 卡片显示规则：我方一直显示（死了压暗）；敌方必须已入场且还活着。
+                // 一波清完立刻收尸，否则第二波进场时上一波的卡还占着位置（4+3 波就会出现 6 张卡）。
+                bool showCard = u.side == Side.Player || (u.inField && u.IsAlive);
+                if (cardRects.ContainsKey(u) && cardRects[u].gameObject.activeSelf != showCard)
+                    cardRects[u].gameObject.SetActive(showCard);
+
+                // 行动条行：只要没入场就整行不显示（后面的波次别提前占着左边一列）
+                if (gaugeRows.ContainsKey(u) && gaugeRows[u].activeSelf != u.inField)
+                    gaugeRows[u].SetActive(u.inField);
             }
 
-            spiritText.text = string.Format("灵能 {0}/{1}     回合 {2}", sim.spirit, sim.config.spiritMax, sim.round);
+            spiritText.text = sim.WaveTotal > 1
+                ? string.Format("灵能 {0}/{1}     回合 {2}     第 {3}/{4} 波",
+                    sim.spirit, sim.config.spiritMax, sim.round, sim.currentWave + 1, sim.WaveTotal)
+                : string.Format("灵能 {0}/{1}     回合 {2}", sim.spirit, sim.config.spiritMax, sim.round);
             potionText.text = string.Format("药品 {0}", sim.potions);
 
             RefreshLog();
@@ -826,3 +866,5 @@ namespace LingJing.UI
         }
     }
 }
+
+

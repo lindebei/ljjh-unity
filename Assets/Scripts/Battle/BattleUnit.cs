@@ -65,6 +65,9 @@ namespace LingJing.Battle
 
         public bool IsAlive { get { return hp > 0f; } }
 
+        /// <summary>是否已经入场。多波战斗里，后面的批次先建好但不参战（行动条不动、不可被选为目标）。</summary>
+        public bool inField = true;
+
         public float HpPercent { get { return maxHp <= 0f ? 0f : Mathf.Clamp01(hp / maxHp); } }
 
         /// <summary>有效攻击：含攻击增益与品质倍率。</summary>

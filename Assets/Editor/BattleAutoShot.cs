@@ -14,7 +14,7 @@ using UnityEngine;
 /// </summary>
 public static class BattleAutoShot
 {
-    const string ScenePath = "Assets/Scenes/BattlePrototype.unity";
+    static string ScenePath = "Assets/Scenes/BattlePrototype.unity";
     const string OutDir = "D:/ljjh/tmp/shots";
     const string PendingKey = "ljjh.autoshot.pending";
 
@@ -34,7 +34,14 @@ public static class BattleAutoShot
         Debug.Log("[BattleAutoShot] 域重载后重新挂上 update");
     }
 
-    public static void Run()
+        /// <summary>同上，但跑多波场景（4+3），验波次入场与 4 只卡片排版。</summary>
+    public static void RunWaves()
+    {
+        ScenePath = "Assets/Scenes/BattleWaves.unity";
+        Run();
+    }
+
+public static void Run()
     {
         Directory.CreateDirectory(OutDir);
         EditorPrefs.SetBool(PendingKey, true);

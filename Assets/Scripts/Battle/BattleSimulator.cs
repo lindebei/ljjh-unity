@@ -35,6 +35,25 @@ namespace LingJing.Battle
         float meanSpr;
         readonly System.Random rng;
 
+        // ---- 波次：一境设计允许一场战斗分多波入场（每波 ≤4 只，总数十只级别），
+        //      一波清完不判胜利，直接入下一波。见 一境战斗流程与状态机 第三节 WaveEnter。
+        readonly List<List<BattleUnit>> waves = new List<List<BattleUnit>>();
+        List<BattleUnit> building;
+        public int currentWave { get; private set; }
+        public int WaveTotal { get { return waves.Count; } }
+
+        /// <summary>最大一波的只数——UI 按这个算卡片宽度，不用管总共有多少批。</summary>
+        public int MaxWaveSize
+        {
+            get
+            {
+                int m = 0;
+                for (int i = 0; i < waves.Count; i++) m = Mathf.Max(m, waves[i].Count);
+                return m;
+            }
+        }
+        readonly Dictionary<BattleUnit, int> focusThisRound = new Dictionary<BattleUnit, int>();
+
         public BattleSimulator(BattleConfig config, int seed = 20261031)
         {
             this.config = config;
@@ -89,7 +108,15 @@ namespace LingJing.Battle
                 maxHp = BattleFormulas.MaxHp(s.vit, level) * hpMul
             };
             u.hp = u.maxHp;
+            u.inField = false;              // 等 Begin()/入波时再上场
             units.Add(u);
+
+            if (building == null)
+            {
+                building = new List<BattleUnit>();
+                waves.Add(building);
+            }
+            building.Add(u);
             return u;
         }
 
@@ -117,8 +144,42 @@ namespace LingJing.Battle
             for (int i = 0; i < units.Count; i++)
                 units[i].gauge = 0f;
 
-            Log(string.Format("开场：我方速度均值 {0:F0}，精神均值 {1:F0}，初始灵能 {2}/{3}，药品 {4} 个",
-                meanSpd, meanSpr, spirit, config.spiritMax, potions));
+            // 敌方第一波上场（其余批次留在 waves 里，等清完再入）
+            currentWave = 0;
+            SpawnWave(0);
+
+            Log(string.Format("开场：我方速度均值 {0:F0}，精神均值 {1:F0}，初始灵能 {2}/{3}，药品 {4} 个，共 {5} 波",
+                meanSpd, meanSpr, spirit, config.spiritMax, potions, Mathf.Max(1, waves.Count)));
+        }
+
+        /// <summary>关闭当前波次：之后 AddEnemy 的敌人都归到下一波。</summary>
+        public void EndWave()
+        {
+            building = null;
+        }
+
+        void SpawnWave(int index)
+        {
+            if (index < 0 || index >= waves.Count) return;
+            var list = waves[index];
+            for (int i = 0; i < list.Count; i++)
+            {
+                list[i].inField = true;
+                list[i].gauge = 0f;
+            }
+            if (index > 0)
+                Log(string.Format("第 {0}/{1} 波入场：{2} 只", index + 1, waves.Count, list.Count));
+        }
+
+        /// <summary>当前波已清空且还有后续波 → 直接入下一波（不判胜利）。</summary>
+        bool AdvanceWaveIfCleared()
+        {
+            if (Alive(Side.Enemy).Count > 0) return false;
+            if (currentWave + 1 >= waves.Count) return false;
+            currentWave++;
+            focusThisRound.Clear();
+            SpawnWave(currentWave);
+            return true;
         }
 
         // ------------------------------------------------------------------ 主循环
@@ -143,7 +204,13 @@ namespace LingJing.Battle
 
         public bool IsBattleOver
         {
-            get { return Alive(Side.Player).Count == 0 || Alive(Side.Enemy).Count == 0; }
+            get
+            {
+                if (Alive(Side.Player).Count == 0) return true;
+                if (Alive(Side.Enemy).Count > 0) return false;
+                // 敌方空了：还有后续波就不算结束
+                return currentWave + 1 >= waves.Count;
+            }
         }
 
         /// <summary>
@@ -153,6 +220,9 @@ namespace LingJing.Battle
         public bool StepOnce()
         {
             if (IsBattleOver) return false;
+
+            // 上一波刚清空 → 下一波上场，同一拍继续推进
+            AdvanceWaveIfCleared();
 
             time += config.tickSeconds;
 
@@ -298,6 +368,7 @@ namespace LingJing.Battle
         {
             playerActionsThisRound = 0;
             round++;
+            focusThisRound.Clear();      // 怪的目标分散上限每回合重置
 
             // 1) 治愈标记：下一回合开始回第一段的一半
             var all = Alive(null);
@@ -406,6 +477,15 @@ namespace LingJing.Battle
             int lowAllies = 0;
             for (int i = 0; i < allies.Count; i++) if (allies[i].HpPercent < 0.65f) lowAllies++;
 
+            // 多怪阵容：3 只以上先扔群体技能。只有风灵会群攻，不这样排的话
+            // 面对一波 4 只，玩家 AI 永远在砍单体，群攻等于没做。
+            var enemies = Alive(Side.Enemy);
+            if (enemies.Count >= 3)
+            {
+                var aoe = BestAoe(actor);
+                if (aoe != null) return aoe;
+            }
+
             bool ultReady = ult != null && actor.Cooldown(ult.id) <= 0 && spirit >= ult.spiritCost;
 
             // 水灵：治疗优先，两三个人半血才交奥义
@@ -430,6 +510,20 @@ namespace LingJing.Battle
             if (ultReady) return ult;
             if (active != null && spirit >= active.spiritCost) return active;
             return basic;
+        }
+
+        /// <summary>该角色当前能放、且是群体伤害的技能里最贵的那一个（奥义 &gt; 主动）。</summary>
+        SkillDefinition BestAoe(BattleUnit actor)
+        {
+            var ult = actor.def.Skill(SkillType.Ultimate);
+            if (ult != null && ult.targetSide == TargetSide.AllEnemies && ult.multiplier > 0f
+                && actor.Cooldown(ult.id) <= 0 && spirit >= ult.spiritCost) return ult;
+
+            var active = actor.def.Skill(SkillType.Active);
+            if (active != null && active.targetSide == TargetSide.AllEnemies && active.multiplier > 0f
+                && actor.Cooldown(active.id) <= 0 && spirit >= active.spiritCost) return active;
+
+            return null;
         }
 
         List<BattleUnit> PickPlayerTargets(BattleUnit actor, SkillDefinition skill)
@@ -541,11 +635,39 @@ namespace LingJing.Battle
                     return list;
                 }
 
+            // 目标分散：同一回合里每个我方单位最多被 2 只怪盯上。
+            // 不限制的话（原来直接挑血最少的），一波 4 只怪会全部砸同一个人，见谁秒谁。
             BattleUnit t = null;
-            float low = float.MaxValue;
+            int bestFocus = int.MaxValue;
+            float lowHp = float.MaxValue;
             for (int i = 0; i < players.Count; i++)
-                if (players[i].hp < low) { low = players[i].hp; t = players[i]; }
-            if (t != null) list.Add(t);
+            {
+                int f;
+                if (!focusThisRound.TryGetValue(players[i], out f)) f = 0;
+                if (f >= 2) continue;
+                if (f < bestFocus || (f == bestFocus && players[i].hp < lowHp))
+                {
+                    bestFocus = f;
+                    lowHp = players[i].hp;
+                    t = players[i];
+                }
+            }
+
+            // 都被盯满 2 次了（怪特别多时）→ 退回「挑血最少的」
+            if (t == null)
+            {
+                lowHp = float.MaxValue;
+                for (int i = 0; i < players.Count; i++)
+                    if (players[i].hp < lowHp) { lowHp = players[i].hp; t = players[i]; }
+            }
+
+            if (t != null)
+            {
+                int f;
+                focusThisRound.TryGetValue(t, out f);
+                focusThisRound[t] = f + 1;
+                list.Add(t);
+            }
             return list;
         }
 
@@ -647,6 +769,7 @@ namespace LingJing.Battle
             for (int i = 0; i < units.Count; i++)
             {
                 if (!units[i].IsAlive) continue;
+                if (!units[i].inField) continue;      // 还没入场的批次不参战、不可被选中
                 if (side.HasValue && units[i].side != side.Value) continue;
                 list.Add(units[i]);
             }

@@ -12,11 +12,26 @@ using LingJing.UI;
 public static class BattleSceneBuilder
 {
     const string ScenePath = "Assets/Scenes/BattlePrototype.unity";
+    const string WaveScenePath = "Assets/Scenes/BattleWaves.unity";
 
     [MenuItem("灵境/生成 BattlePrototype 场景")]
     public static void BuildScene()
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(ScenePath));
+        BuildInto(ScenePath, new[] { "en_bonefish", "en_stonelizard", "en_bird" }, null);
+    }
+
+    [MenuItem("灵境/生成 多波战斗场景 (4+3)")]
+    public static void BuildWaveScene()
+    {
+        // 波次演示：一波清完不判胜利，直接入下一波（一境战斗流程文档 WaveEnter）
+        BuildInto(WaveScenePath,
+            new[] { "en_bonefish", "en_stonelizard", "en_rat", "en_bear" },
+            new[] { "en_firetiger", "en_graywolf", "en_bonefish" });
+    }
+
+    static void BuildInto(string path, string[] wave1, string[] wave2)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
 
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
@@ -32,15 +47,16 @@ public static class BattleSceneBuilder
         var hud = runner.GetComponent<BattleHud>();
         hud.playerLevel = 24;
         hud.enemyLevel = 10;
-        hud.enemyIds = new[] { "en_bonefish", "en_stonelizard", "en_bird" };   // 2 普通 + 1 精英
+        hud.enemyIds = wave1;
+        hud.enemyIdsWave2 = wave2 ?? new string[0];
         hud.timeScale = 1f;
         hud.autoBattle = false;
 
-        EditorSceneManager.SaveScene(scene, ScenePath);
+        EditorSceneManager.SaveScene(scene, path);
         AddToBuildSettings();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log("[BattleSceneBuilder] 场景已生成：" + ScenePath);
+        Debug.Log("[BattleSceneBuilder] 场景已生成：" + path);
     }
 
     static void AddToBuildSettings()

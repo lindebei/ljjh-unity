@@ -39,23 +39,33 @@ public static class BattleReconcile
 
         var scenarios = new List<Scenario>
         {
-            new Scenario("普通x2 · lv10", new[] { "en_bonefish", "en_stonelizard" }, 10),
-            new Scenario("普通x3 · lv10", new[] { "en_bonefish", "en_stonelizard", "en_rat" }, 10),
-            new Scenario("普通x2 · lv24", new[] { "en_bonefish", "en_stonelizard" }, 24),
-            new Scenario("精英x1 · lv10", new[] { "en_bird" }, 10),
-            new Scenario("精英x2 · lv10", new[] { "en_bird", "en_fox" }, 10),
-            new Scenario("小Boss · lv16", new[] { "en_jelly" }, 16),
-            // 这一条是 BattlePrototype 场景里实际用的编成（2 普通 + 1 精英），
-            // 之前拿 UI 的 14 回合去比批测的「精英x1」是拿两个不同场景比，结论作废。
-            new Scenario("UI同款 普2+精1 · lv10", new[] { "en_bonefish", "en_stonelizard", "en_bird" }, 10),
-            // 设计上限：一境地图文档写「敌群规模 1–4 只」「同场最多 2 只精英」，
-            // 之前只测到 3 只，上限这一档没覆盖。
-            new Scenario("上限 普通x4 · lv10", new[] { "en_bonefish", "en_stonelizard", "en_rat", "en_bear" }, 10),
-            new Scenario("上限 普2+精2 · lv10", new[] { "en_rat", "en_bear", "en_bird", "en_fox" }, 10),
-            // 压力档：用户提到「可能遇到 10 个怪的阵容」。文档里没有这条，先量一下会发生什么。
-            new Scenario("压力 普通x10 · lv10", new[] {
+            new Scenario("普通x2 · lv10", W(new[] { "en_bonefish", "en_stonelizard" }), 10),
+            new Scenario("普通x3 · lv10", W(new[] { "en_bonefish", "en_stonelizard", "en_rat" }), 10),
+            new Scenario("普通x2 · lv24", W(new[] { "en_bonefish", "en_stonelizard" }), 24),
+            new Scenario("精英x1 · lv10", W(new[] { "en_bird" }), 10),
+            new Scenario("精英x2 · lv10", W(new[] { "en_bird", "en_fox" }), 10),
+            new Scenario("小Boss · lv16", W(new[] { "en_jelly" }), 16),
+            // 这一条是 BattlePrototype 场景里实际用的编成（2 普通 + 1 精英）
+            new Scenario("UI同款 普2+精1 · lv10", W(new[] { "en_bonefish", "en_stonelizard", "en_bird" }), 10),
+
+            // 设计上限：一境地图文档「敌群规模 1–4 只」「同场最多 2 只精英」
+            new Scenario("上限 普通x4 · lv10", W(new[] { "en_bonefish", "en_stonelizard", "en_rat", "en_bear" }), 10),
+            new Scenario("上限 普2+精2 · lv10", W(new[] { "en_rat", "en_bear", "en_bird", "en_fox" }), 10),
+
+            // 多波：一境战斗流程文档的 WaveEnter（一波清完不判胜利，直接入下一波）。
+            // 「可能遇到 10 个怪」按这个口径理解：每波 ≤4，总数十几只。
+            new Scenario("波次 4+4 (总8) · lv10", W(
+                new[] { "en_bonefish", "en_stonelizard", "en_rat", "en_bear" },
+                new[] { "en_firetiger", "en_graywolf", "en_bonefish", "en_rat" }), 10),
+            new Scenario("波次 4+3+3 (总10) · lv10", W(
+                new[] { "en_bonefish", "en_stonelizard", "en_rat", "en_bear" },
+                new[] { "en_firetiger", "en_graywolf", "en_bonefish" },
+                new[] { "en_stonelizard", "en_rat", "en_firetiger" }), 10),
+
+            // 超出设计的压力档：同屏 10 只（没有波次），只用来确认护栏有效
+            new Scenario("压力 同屏x10 · lv10", W(new[] {
                 "en_bonefish", "en_stonelizard", "en_rat", "en_firetiger", "en_graywolf",
-                "en_bear", "en_bonefish", "en_stonelizard", "en_rat", "en_firetiger" }, 10),
+                "en_bear", "en_bonefish", "en_stonelizard", "en_rat", "en_firetiger" }), 10),
         };
 
         var report = new StringBuilder();
@@ -79,16 +89,19 @@ public static class BattleReconcile
     struct Scenario
     {
         public string name;
-        public string[] enemyIds;
+        public string[][] waves;      // 每个元素是一波（每波 ≤4 只的设计上限由数据决定）
         public int enemyLevel;
 
-        public Scenario(string name, string[] ids, int level)
+        public Scenario(string name, string[][] waves, int level)
         {
             this.name = name;
-            this.enemyIds = ids;
+            this.waves = waves;
             this.enemyLevel = level;
         }
     }
+
+    static string[][] W(params string[][] waves) { return waves; }
+    static string[][] W(params string[] ids) { return new[] { ids }; }
 
     struct Aggregate
     {
@@ -134,11 +147,16 @@ public static class BattleReconcile
         }
 
         int band = cfg.BandIndex(sc.enemyLevel);
-        for (int i = 0; i < sc.enemyIds.Length; i++)
+        for (int w = 0; w < sc.waves.Length; w++)
         {
-            var def = BattleDatabase.GetCreature(sc.enemyIds[i]);
-            if (def == null) { Debug.LogError("[BattleReconcile] 缺 " + sc.enemyIds[i]); return null; }
-            sim.AddEnemy(def, sc.enemyLevel, band);
+            var ids = sc.waves[w];
+            for (int i = 0; i < ids.Length; i++)
+            {
+                var def = BattleDatabase.GetCreature(ids[i]);
+                if (def == null) { Debug.LogError("[BattleReconcile] 缺 " + ids[i]); return null; }
+                sim.AddEnemy(def, sc.enemyLevel, band);
+            }
+            sim.EndWave();
         }
 
         sim.Begin();
