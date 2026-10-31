@@ -48,6 +48,14 @@ public static class BattleReconcile
             // 这一条是 BattlePrototype 场景里实际用的编成（2 普通 + 1 精英），
             // 之前拿 UI 的 14 回合去比批测的「精英x1」是拿两个不同场景比，结论作废。
             new Scenario("UI同款 普2+精1 · lv10", new[] { "en_bonefish", "en_stonelizard", "en_bird" }, 10),
+            // 设计上限：一境地图文档写「敌群规模 1–4 只」「同场最多 2 只精英」，
+            // 之前只测到 3 只，上限这一档没覆盖。
+            new Scenario("上限 普通x4 · lv10", new[] { "en_bonefish", "en_stonelizard", "en_rat", "en_bear" }, 10),
+            new Scenario("上限 普2+精2 · lv10", new[] { "en_rat", "en_bear", "en_bird", "en_fox" }, 10),
+            // 压力档：用户提到「可能遇到 10 个怪的阵容」。文档里没有这条，先量一下会发生什么。
+            new Scenario("压力 普通x10 · lv10", new[] {
+                "en_bonefish", "en_stonelizard", "en_rat", "en_firetiger", "en_graywolf",
+                "en_bear", "en_bonefish", "en_stonelizard", "en_rat", "en_firetiger" }, 10),
         };
 
         var report = new StringBuilder();
