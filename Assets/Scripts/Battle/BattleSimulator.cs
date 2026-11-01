@@ -345,8 +345,13 @@ namespace LingJing.Battle
             playerActionsTotal++;
             playerActionsThisRound++;
 
+            // 只有「单体」技能才使用玩家点的目标；群体技能一律按技能自己的目标范围算，
+            // 否则全体技能会因为带着一个点击目标而只打一只（用户在试玩里踩到过）。
+            bool singleTargetSide = skill.targetSide == TargetSide.Enemy
+                                    || skill.targetSide == TargetSide.Ally
+                                    || skill.targetSide == TargetSide.Self;
             List<BattleUnit> targets;
-            if (chosenTarget != null && chosenTarget.IsAlive && chosenTarget.inField)
+            if (singleTargetSide && chosenTarget != null && chosenTarget.IsAlive && chosenTarget.inField)
                 targets = new List<BattleUnit> { chosenTarget };
             else
                 targets = PickPlayerTargets(actor, skill);
@@ -931,18 +936,40 @@ namespace LingJing.Battle
                     float scale = skill.targetSide == TargetSide.AllEnemies ? config.aoeDamageScale : 1f;
                     if (scale != 1f) { aoeCastCount++; lastAoeScale = scale; }
 
+                    float mul = skill.multiplier * scale * LingJing.Data.SkillRanks.MultiplierMul(skill);
                     int seg = Mathf.Max(1, skill.segments);
-                    for (int s = 0; s < seg; s++)
+
+                    // 单段技能：伤害要落到「每一个目标」上（全体技能以前只打了第一个敌人，试玩里被抓出来）
+                    if (seg <= 1)
                     {
-                        var t = enemies[skill.spreadSegments ? s % enemies.Count : 0];
-                        if (t == null || !t.IsAlive) continue;
-                        float dealt = calc.Apply(actor, t, skill.multiplier * scale * LingJing.Data.SkillRanks.MultiplierMul(skill));
-                        if (skill.appliedStatus != StatusType.None && skill.dotStacks > 0)
-                            t.ApplyStatus(skill.appliedStatus, skill.dotStacks, config.dotDuration, 0f, config.dotMaxStacks);
-                        if (skill.gaugePushbackPercent > 0f)
-                            t.gauge = Mathf.Max(0f, t.gauge - config.gaugeThreshold * skill.gaugePushbackPercent);
-                        if (verbose)
-                            Log(string.Format("{0} → {1} 第{2}段 {3:F0}", actor.displayName, t.displayName, s + 1, dealt));
+                        for (int i = 0; i < enemies.Count; i++)
+                        {
+                            var t = enemies[i];
+                            if (t == null || !t.IsAlive) continue;
+                            float dealt = calc.Apply(actor, t, mul);
+                            if (skill.appliedStatus != StatusType.None && skill.dotStacks > 0)
+                                t.ApplyStatus(skill.appliedStatus, skill.dotStacks, config.dotDuration, 0f, config.dotMaxStacks);
+                            if (skill.gaugePushbackPercent > 0f)
+                                t.gauge = Mathf.Max(0f, t.gauge - config.gaugeThreshold * skill.gaugePushbackPercent);
+                            if (verbose)
+                                Log(string.Format("{0} → {1} {2:F0}", actor.displayName, t.displayName, dealt));
+                        }
+                    }
+                    else
+                    {
+                        // 多段技能：段数在多目标之间轮转（单体多段就是同一目标吃满）
+                        for (int s = 0; s < seg; s++)
+                        {
+                            var t = enemies[skill.spreadSegments ? s % enemies.Count : 0];
+                            if (t == null || !t.IsAlive) continue;
+                            float dealt = calc.Apply(actor, t, mul);
+                            if (skill.appliedStatus != StatusType.None && skill.dotStacks > 0)
+                                t.ApplyStatus(skill.appliedStatus, skill.dotStacks, config.dotDuration, 0f, config.dotMaxStacks);
+                            if (skill.gaugePushbackPercent > 0f)
+                                t.gauge = Mathf.Max(0f, t.gauge - config.gaugeThreshold * skill.gaugePushbackPercent);
+                            if (verbose)
+                                Log(string.Format("{0} → {1} 第{2}段 {3:F0}", actor.displayName, t.displayName, s + 1, dealt));
+                        }
                     }
                 }
             }

@@ -53,7 +53,9 @@ namespace LingJing.UI
         readonly Dictionary<BattleUnit, Text> mpTexts = new Dictionary<BattleUnit, Text>();
         Text mpPotionText;
         Button mpPotionButton;
-        int pendingSlot = -1;              // >=0 表示正等玩家点一个敌人当目标
+        int pendingSlot = -1;              // >=0 表示正等玩家点目标
+        bool pendingAlly;                  // true=这次点的是友方（辅助/治疗）
+        readonly Dictionary<BattleUnit, Text> shieldTexts = new Dictionary<BattleUnit, Text>();
         readonly Dictionary<BattleUnit, Text> gaugeTexts = new Dictionary<BattleUnit, Text>();
         readonly Dictionary<BattleUnit, RectTransform> cardRects = new Dictionary<BattleUnit, RectTransform>();
         readonly Dictionary<BattleUnit, Image> cardImages = new Dictionary<BattleUnit, Image>();
@@ -633,7 +635,7 @@ namespace LingJing.UI
                 le.preferredWidth = cw;
                 le.preferredHeight = ch;
 
-                // 敌方卡片做成按钮：单体技能点完之后点它决定打谁（自己的兽不能当目标）
+                // 卡片做成按钮：单体攻击点敌方卡，单体辅助/治疗点我方卡（点完再结算）
                 cardButtons[u] = card.gameObject.AddComponent<Button>();
                 cardButtons[u].targetGraphic = card;
                 cardButtons[u].transition = Selectable.Transition.None;
@@ -733,6 +735,8 @@ namespace LingJing.UI
                 {
                     var mpBar = MakeBar(col, "Mp", new Color(0.36f, 0.68f, 1f), tw, 17f);
                     mpFills[u] = mpBar.Item2;
+                shieldTexts[u] = MakeText(col, "Shield", "", 14, new Color(0.55f, 0.85f, 1f), TextAnchor.MiddleLeft,
+                    new Vector2(0f, 1f), new Vector2(tw, 16f), new Vector2(0f, 1f), Vector2.zero);
                     mpTexts[u] = MakeText(mpBar.Item1, "MpText", "", 14, Color.white, TextAnchor.MiddleCenter,
                         new Vector2(0f, 0f), new Vector2(tw, 17f), new Vector2(0f, 0f), Vector2.zero);
                     Stretch(mpTexts[u].rectTransform);
@@ -785,7 +789,8 @@ namespace LingJing.UI
                 && UnityEngine.InputSystem.Keyboard.current.escapeKey.wasPressedThisFrame)
             {
                 pendingSlot = -1;
-                MarkTargetable(false);
+                pendingAlly = false;
+                MarkTargetable(false, false);
                 statusBanner.text = "轮到 " + (sim.awaitingPlayer != null ? sim.awaitingPlayer.displayName : "") + " —— 选一个技能";
                 statusBanner.color = new Color(1f, 0.9f, 0.5f);
             }
@@ -927,29 +932,41 @@ namespace LingJing.UI
             if (pendingSlot < 0) return;
             var actor = sim.awaitingPlayer;
             if (actor == null) { pendingSlot = -1; return; }
-            if (target == null || !target.IsAlive || target.side != Side.Enemy) return;
+            if (target == null || !target.IsAlive) return;
 
             var skill = actor.SkillAt(pendingSlot);
+            bool wantAlly = pendingAlly;
             pendingSlot = -1;
-            MarkTargetable(false);
+            pendingAlly = false;
+            MarkTargetable(false, false);
             if (skill == null) return;
+            // 点的是敌方卡却要辅助技能（或反过来）→ 不结算，保持等待
+            if (wantAlly && target.side != Side.Player) return;
+            if (!wantAlly && target.side != Side.Enemy) return;
             sim.ResolvePlayerTurn(skill, target);
             ClearButtons();
             RefreshAll();
         }
 
-        /// <summary>把敌方卡片标成「可点」：加一圈暖色描边，并放大一点点。</summary>
-        void MarkTargetable(bool on)
+        /// <summary>把「可点的卡」标出来：敌方（攻击）或我方（辅助/治疗）加一圈暖色描边并略微放大。</summary>
+        void MarkTargetable(bool on, bool ally)
         {
+            var wantSide = ally ? Side.Player : Side.Enemy;
             for (int i = 0; i < sim.units.Count; i++)
             {
                 var u = sim.units[i];
-                if (u.side != Side.Enemy || !cardImages.ContainsKey(u)) continue;
+                if (!cardImages.ContainsKey(u)) continue;
                 if (!u.IsAlive || !u.inField) continue;
-                cardImages[u].color = on
-                    ? Color.Lerp(cardBaseColors[u], new Color(1f, 0.85f, 0.45f), 0.35f)
-                    : (u.quality == Quality.Normal ? cardBaseColors[u] : QualityCardTint(u.quality));
-                cardRects[u].localScale = on ? new Vector3(1.03f, 1.03f, 1f) : Vector3.one;
+                bool mark = on && u.side == wantSide;
+                if (u.side == Side.Enemy)
+                    cardImages[u].color = mark
+                        ? Color.Lerp(cardBaseColors[u], new Color(1f, 0.85f, 0.45f), 0.35f)
+                        : (u.quality == Quality.Normal ? cardBaseColors[u] : QualityCardTint(u.quality));
+                else
+                    cardImages[u].color = mark
+                        ? Color.Lerp(cardBaseColors[u], new Color(0.55f, 0.95f, 0.65f), 0.35f)
+                        : cardBaseColors[u];
+                cardRects[u].localScale = mark ? new Vector3(1.03f, 1.03f, 1f) : Vector3.one;
             }
         }
 
@@ -962,14 +979,16 @@ namespace LingJing.UI
             if (skill.spiritCost > 0 && actor.mp < skill.spiritCost) { Flash("这只兽的 MP 不够"); return; }
             if (actor.Cooldown(skill.id) > 0) { Flash(string.Format("冷却中（还要 {0} 次行动）", actor.Cooldown(skill.id))); return; }
 
-            // 单体攻击/单奶要玩家自己点目标；群体技能直接结算
-            bool needsTarget = skill.targetSide == TargetSide.Enemy && skill.multiplier > 0;
-            if (needsTarget)
+            // 单体技能要玩家自己点目标（攻击点敌人、辅助/治疗点自己人）；群体技能直接结算
+            bool needEnemy = skill.targetSide == TargetSide.Enemy && skill.multiplier > 0;
+            bool needAlly = skill.targetSide == TargetSide.Ally;
+            if (needEnemy || needAlly)
             {
                 pendingSlot = slot;
-                MarkTargetable(true);
-                statusBanner.text = "点一个敌人作为目标（Esc 取消）";
-                statusBanner.color = new Color(1f, 0.85f, 0.45f);
+                pendingAlly = needAlly;
+                MarkTargetable(true, needAlly);
+                statusBanner.text = needAlly ? "点一只自己的兽作为目标（Esc 取消）" : "点一个敌人作为目标（Esc 取消）";
+                statusBanner.color = new Color(needAlly ? 0.55f : 1f, 0.9f, needAlly ? 0.65f : 0.45f);
                 return;
             }
 
@@ -1028,7 +1047,8 @@ namespace LingJing.UI
             }
             potionButton.interactable = false;
             if (mpPotionButton != null) mpPotionButton.interactable = false;
-            if (pendingSlot >= 0) { pendingSlot = -1; MarkTargetable(false); }
+            if (pendingSlot >= 0) { pendingSlot = -1; pendingAlly = false;
+                MarkTargetable(false, false); }
             statusBanner.text = "";
         }
 
@@ -1114,6 +1134,11 @@ namespace LingJing.UI
                 {
                     mpFills[u].anchorMax = new Vector2(Mathf.Clamp01(u.mp / (float)Mathf.Max(1, u.mpMax)), 1f);
                     mpTexts[u].text = string.Format("MP {0}/{1}", u.mp, u.mpMax);
+                if (shieldTexts.ContainsKey(u))
+                {
+                    shieldTexts[u].text = u.shield > 0.5f ? string.Format("盾 {0}", Mathf.RoundToInt(u.shield)) : "";
+                    shieldTexts[u].transform.SetAsLastSibling();
+                }
                 }
             }
             if (mpPotionText != null) mpPotionText.text = string.Format("魔药 {0}\n+4 MP", sim.mpPotions);
