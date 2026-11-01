@@ -56,6 +56,13 @@ public static class BattleAutoShot
         Run();
     }
 
+    /// <summary>技能界面单独截一张。</summary>
+    public static void RunSkill()
+    {
+        ScenePath = "Assets/Scenes/SkillScreen.unity";
+        Run();
+    }
+
     public static void RunBoss()
     {
         ScenePath = "Assets/Scenes/BattleBoss.unity";

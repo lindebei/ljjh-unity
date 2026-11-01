@@ -178,4 +178,24 @@ public static class BattleSceneBuilder
         scenes.Insert(0, new EditorBuildSettingsScene(path, true));
         EditorBuildSettings.scenes = scenes.ToArray();
     }
+
+        [MenuItem("灵境/生成 SkillScreen 场景")]
+        public static void BuildSkillScene()
+        {
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            var cam = new GameObject("Main Camera", typeof(Camera));
+            var c = cam.GetComponent<Camera>();
+            c.orthographic = true;
+            c.clearFlags = CameraClearFlags.SolidColor;
+            c.backgroundColor = new Color(0.05f, 0.06f, 0.08f, 1f);
+            cam.transform.position = new Vector3(0f, 0f, -10f);
+
+            var go = new GameObject("SkillScreen");
+            go.AddComponent<LingJing.UI.SkillScreen>();
+
+            const string path = "Assets/Scenes/SkillScreen.unity";
+            EditorSceneManager.SaveScene(scene, path);
+            AddToBuildSettings(path);
+            Debug.Log("[BattleSceneBuilder] 场景已生成：" + path);
+        }
 }
