@@ -745,7 +745,7 @@ namespace LingJing.UI
                 var shieldGo = new GameObject("ShieldFill", typeof(Image));
                 shieldGo.transform.SetParent(hpBar.Item1, false);
                 var shieldImg = shieldGo.GetComponent<Image>();
-                shieldImg.color = new Color(0.29f, 0.20f, 0.72f, 0.88f);
+                shieldImg.color = new Color(0.42f, 0.32f, 1f, 1f);   // 不透明靛蓝：半透明压在红血上会发闷，看着不像靛蓝
                 shieldImg.raycastTarget = false;
                 var shieldRt = shieldImg.rectTransform;
                 shieldRt.anchorMin = Vector2.zero;
