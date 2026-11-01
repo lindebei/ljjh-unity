@@ -158,6 +158,14 @@ namespace LingJing.UI
             // 起点在卡片中下部（血条下方那片空区），往上飘 55px —— 全程留在卡片范围内，
             // 既不飞进顶部的「灵能/回合/药品」那行，也不跟血条上的 1218/2117 数字打架。
             // 按 popCount 取模错开纵向位置 + 横向大幅散开，否则治疗和伤害同时跳会叠成「+214422」。
+            // 受击位移：立绘左右抖一下；治疗不给抖，不然看着像挨打
+            if (!isHeal && portraits.ContainsKey(unit) && portraits[unit] != null)
+            {
+                var shake = portraits[unit].gameObject.GetComponent<HitShake>();
+                if (shake == null) shake = portraits[unit].gameObject.AddComponent<HitShake>();
+                shake.Init(portraits[unit].rectTransform.anchoredPosition, 7f, 0.20f);
+            }
+
             Vector3 basePos = cardRects[unit].position;
             float stagger = (popCount % 3) * 14f;
             rt.position = basePos + new Vector3(UnityEngine.Random.Range(-110f, 110f), -32f + stagger, 0f);
@@ -1175,8 +1183,17 @@ namespace LingJing.UI
             }
         }
 
+        void ClearFloatingNumbers()
+        {
+            if (floatLayer == null) return;
+            for (int i = floatLayer.childCount - 1; i >= 0; i--)
+                Destroy(floatLayer.GetChild(i).gameObject);
+            popCount = 0;
+        }
+
         void ShowFinish()
         {
+            ClearFloatingNumbers();
             bool win = sim.Alive(Side.Enemy).Count == 0;
             ClearButtons(); // 先清按钮（它会把横幅清空），再写结果文字，别反了
             statusBanner.text = win ? "战斗结束：胜利" : "战斗结束：失败";
@@ -1200,12 +1217,12 @@ namespace LingJing.UI
             // 闭环：结算后给一个回主菜单的出口（v0.1 之前结算完就停在这儿，没法再开一局）
             if (menuBackButton == null)
             {
-                menuBackButton = MakeButton(canvasRect, "MenuBack", "回主菜单", new Vector2(0f, -150f), new Vector2(280f, 74f));
-                var mrt = menuBackButton.GetComponent<RectTransform>();
-                mrt.anchorMin = new Vector2(0.5f, 0.5f);
-                mrt.anchorMax = new Vector2(0.5f, 0.5f);
-                mrt.pivot = new Vector2(0.5f, 0.5f);
-                mrt.anchoredPosition = new Vector2(0f, -150f);
+                menuBackButton = MakeButton(canvasRect, "MenuBack", "回主菜单", new Vector2(0f, 0f), new Vector2(240f, 64f));
+            var mbrt = menuBackButton.GetComponent<RectTransform>();
+            mbrt.anchorMin = new Vector2(0.5f, 0.5f);   // 屏幕中线下方：横幅与卡片之间的空档
+            mbrt.anchorMax = new Vector2(0.5f, 0.5f);
+            mbrt.pivot = new Vector2(0.5f, 0.5f);
+            mbrt.anchoredPosition = new Vector2(0f, -56f);
 
                 // 运行时新建的按钮，ColorBlock 的首次着色没生效（截出来是一块纯白）。
                 // 这里把底色写死、四个状态色都设白，等于只靠 Image.color 出颜色。
