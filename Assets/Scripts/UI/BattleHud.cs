@@ -737,7 +737,9 @@ namespace LingJing.UI
             if (sim == null || !battleStarted) return;
 
             // 选目标时可以按 Esc 放弃，回到技能选择
-            if (pendingSlot >= 0 && Input.GetKeyDown(KeyCode.Escape))
+            // 注意：工程 activeInputHandler=1（只用新输入系统），旧的 UnityEngine.Input 会直接抛异常
+            if (pendingSlot >= 0 && UnityEngine.InputSystem.Keyboard.current != null
+                && UnityEngine.InputSystem.Keyboard.current.escapeKey.wasPressedThisFrame)
             {
                 pendingSlot = -1;
                 MarkTargetable(false);
