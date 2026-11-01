@@ -146,8 +146,11 @@ namespace LingJing.UI
 
                 var label = card.GetComponentInChildren<Text>();
                 StretchLabel(label, 88f, 24);
-                label.text = string.Format("{0}（{1}）\n技能点 {2}  ·  战力 {3}",
-                    d.displayName, d.element, PlayerLevel / 4, Mathf.RoundToInt(PowerWithGear(d)));
+                label.text = string.Format("{0}（{1}）\n技能点 {2}/{3}  ·  战力 {4}",
+                    d.displayName, d.element,
+                    LingJing.Data.SkillRanks.Remaining(d, PlayerLevel),
+                    LingJing.Data.SkillRanks.TotalPoints(PlayerLevel),
+                    Mathf.RoundToInt(PowerWithGear(d)));
 
                 var icon = new GameObject("Icon", typeof(Image)).GetComponent<Image>();
                 icon.transform.SetParent(card.transform, false);
@@ -170,7 +173,10 @@ namespace LingJing.UI
             if (def == null) return;
             var eq = SkillLoadout.Get(def.id);
 
-            MakeText(listCol, "Hdr", string.Format("{0} 的技能池（{1}）", def.displayName, def.element),
+            MakeText(listCol, "Hdr", string.Format("{0} 的技能池（{1}）　剩余技能点 {2}/{3}",
+                    def.displayName, def.element,
+                    LingJing.Data.SkillRanks.Remaining(def, PlayerLevel),
+                    LingJing.Data.SkillRanks.TotalPoints(PlayerLevel)),
                 24, new Color(0.8f, 0.88f, 1f), TextAnchor.MiddleLeft,
                 new Vector2(0f, 1f), new Vector2(740f, 34f), new Vector2(0f, 1f), new Vector2(0f, -4f));
 
@@ -194,9 +200,12 @@ namespace LingJing.UI
                 string shape = ShapeTag(sk);
                 string state = !unlocked ? string.Format("Lv{0} 解锁", sk.unlockLevel)
                     : (equipped ? "已上阵（点一下卸下）" : "点一下装上");
-                label.text = string.Format("{0}{1}\n<{2}>{3}　{4}　MP{5}",
-                    sk.displayName, equipped ? "  ✔" : "", shape, sk.tier == 1 ? "普攻" : "",
-                    state, sk.spiritCost < 0 ? "+1" : sk.spiritCost.ToString());
+                int rank = LingJing.Data.SkillRanks.Get(sk.id);
+                int costVal = LingJing.Data.SkillRanks.Cost(sk);
+                label.text = string.Format("{0} {1}{2}\n<{3}>{4}　{5}　MP{6}",
+                    sk.displayName, LingJing.Data.SkillRanks.RankLabel(rank), equipped ? " ✔" : "",
+                    shape, sk.tier == 1 ? "普攻" : "", state,
+                    costVal < 0 ? "+1" : costVal.ToString());
                 label.color = unlocked ? Color.white : new Color(0.55f, 0.58f, 0.62f);
 
                 var icon = new GameObject("Icon", typeof(Image)).GetComponent<Image>();
@@ -212,8 +221,30 @@ namespace LingJing.UI
                 irt.sizeDelta = new Vector2(58f, 58f);
                 irt.anchoredPosition = new Vector2(10f, 0f);
 
+                bool canUp = LingJing.Data.SkillRanks.CanUpgrade(def, sk, PlayerLevel);
+                var up = MakeButton(row.transform, "Up", "升级", Vector2.zero, new Vector2(96f, 44f));
+                var upRt = up.GetComponent<RectTransform>();
+                upRt.anchorMin = new Vector2(1f, 0.5f);
+                upRt.anchorMax = new Vector2(1f, 0.5f);
+                upRt.pivot = new Vector2(1f, 0.5f);
+                upRt.anchoredPosition = new Vector2(-10f, 0f);
+                var upImg = up.GetComponent<Image>();
+                upImg.color = canUp ? new Color(0.30f, 0.42f, 0.30f, 1f) : new Color(0.18f, 0.19f, 0.21f, 1f);
+                var upColors = up.colors;
+                upColors.normalColor = Color.white;
+                upColors.highlightedColor = new Color(0.92f, 1f, 0.92f);
+                upColors.pressedColor = new Color(0.85f, 0.95f, 0.85f);
+                upColors.selectedColor = Color.white;
+                upColors.disabledColor = new Color(0.7f, 0.7f, 0.7f);
+                up.colors = upColors;
+                up.interactable = canUp;
+                var upText = up.GetComponentInChildren<Text>();
+                upText.fontSize = 20;
+                upText.text = rank >= 3 ? "满级" : "升级";
+
                 string skId = sk.id;
                 row.onClick.AddListener(() => OnSkillClicked(skId));
+                up.onClick.AddListener(() => OnUpgradeClicked(skId));
             }
         }
 
@@ -275,6 +306,20 @@ namespace LingJing.UI
         }
 
         // ------------------------------------------------------------------ 交互
+
+        void OnUpgradeClicked(string skillId)
+        {
+            if (def == null) return;
+            var sk = BattleDatabase.GetSkill(skillId);
+            if (sk == null) return;
+            if (sk.unlockLevel > PlayerLevel) { Flash("还没到解锁等级"); return; }
+            int rank = LingJing.Data.SkillRanks.Get(skillId);
+            if (rank >= sk.maxRank) { Flash("已经满级"); return; }
+            if (LingJing.Data.SkillRanks.Remaining(def, PlayerLevel) <= 0) { Flash("技能点不够（每 4 级 1 点）"); return; }
+            LingJing.Data.SkillRanks.Set(skillId, rank + 1);
+            Flash(string.Format("{0} 升到 {1}", sk.displayName, LingJing.Data.SkillRanks.RankLabel(rank + 1)));
+            Rebuild();
+        }
 
         void OnSkillClicked(string skillId)
         {

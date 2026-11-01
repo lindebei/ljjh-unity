@@ -648,14 +648,14 @@ namespace LingJing.Battle
                 if (aoe != null) return aoe;
             }
 
-            bool ultReady = ult != null && actor.Cooldown(ult.id) <= 0 && actor.mp >= ult.spiritCost;
+            bool ultReady = ult != null && actor.Cooldown(ult.id) <= 0 && actor.mp >= LingJing.Data.SkillRanks.Cost(ult);
 
             // 水灵：治疗优先，两三个人半血才交奥义
             if (actor.id == "beast_water")
             {
                 if (ultReady && lowAllies >= 2) return ult;
-                if (support != null && actor.mp >= support.spiritCost && lowAllies >= 1) return support;
-                if (active != null && actor.mp >= active.spiritCost) return active;
+                if (support != null && actor.mp >= LingJing.Data.SkillRanks.Cost(support) && lowAllies >= 1) return support;
+                if (active != null && actor.mp >= LingJing.Data.SkillRanks.Cost(active)) return active;
                 return basic;
             }
 
@@ -663,14 +663,14 @@ namespace LingJing.Battle
             if (actor.id == "beast_earth")
             {
                 if (ultReady) return ult;
-                if (support != null && actor.mp >= support.spiritCost && actor.HpPercent < 0.75f) return support;
-                if (active != null && actor.mp >= active.spiritCost) return active;
+                if (support != null && actor.mp >= LingJing.Data.SkillRanks.Cost(support) && actor.HpPercent < 0.75f) return support;
+                if (active != null && actor.mp >= LingJing.Data.SkillRanks.Cost(active)) return active;
                 return basic;
             }
 
             // 火灵 / 风灵：奥义 ＞ 主动 ＞ 普攻
             if (ultReady) return ult;
-            if (active != null && actor.mp >= active.spiritCost) return active;
+            if (active != null && actor.mp >= LingJing.Data.SkillRanks.Cost(active)) return active;
             return basic;
         }
 
@@ -679,11 +679,11 @@ namespace LingJing.Battle
         {
             var ult = actor.def.Skill(SkillType.Ultimate);
             if (ult != null && ult.targetSide == TargetSide.AllEnemies && ult.multiplier > 0f
-                && actor.Cooldown(ult.id) <= 0 && actor.mp >= ult.spiritCost) return ult;
+                && actor.Cooldown(ult.id) <= 0 && actor.mp >= LingJing.Data.SkillRanks.Cost(ult)) return ult;
 
             var active = actor.def.Skill(SkillType.Active);
             if (active != null && active.targetSide == TargetSide.AllEnemies && active.multiplier > 0f
-                && actor.Cooldown(active.id) <= 0 && actor.mp >= active.spiritCost) return active;
+                && actor.Cooldown(active.id) <= 0 && actor.mp >= LingJing.Data.SkillRanks.Cost(active)) return active;
 
             return null;
         }
@@ -848,11 +848,13 @@ namespace LingJing.Battle
 
             if (ActionStarted != null) ActionStarted(actor, skill);
 
-            // 灵能
-            if (skill.spiritCost < 0) actor.mp = Mathf.Min(actor.mpMax, actor.mp + 1);
-            else actor.mp = Mathf.Max(0, actor.mp - skill.spiritCost);
+            // 灵能：走技能等级折算后的有效蓝耗
+            int cost = LingJing.Data.SkillRanks.Cost(skill);
+            if (cost < 0) actor.mp = Mathf.Min(actor.mpMax, actor.mp + 1);
+            else actor.mp = Mathf.Max(0, actor.mp - cost);
 
-            if (skill.cooldown > 0) actor.SetCooldown(skill.id, skill.cooldown);
+            int cd = LingJing.Data.SkillRanks.Cooldown(skill);
+            if (cd > 0) actor.SetCooldown(skill.id, cd);
             if (skill.taunt) actor.tauntRounds = Mathf.Max(1, skill.controlDuration);
 
             // 治疗（两段式）
@@ -916,7 +918,7 @@ namespace LingJing.Battle
                     {
                         var t = enemies[skill.spreadSegments ? s % enemies.Count : 0];
                         if (t == null || !t.IsAlive) continue;
-                        float dealt = calc.Apply(actor, t, skill.multiplier * scale);
+                        float dealt = calc.Apply(actor, t, skill.multiplier * scale * LingJing.Data.SkillRanks.MultiplierMul(skill));
                         if (skill.appliedStatus != StatusType.None && skill.dotStacks > 0)
                             t.ApplyStatus(skill.appliedStatus, skill.dotStacks, config.dotDuration, 0f, config.dotMaxStacks);
                         if (skill.gaugePushbackPercent > 0f)
