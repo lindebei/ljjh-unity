@@ -37,7 +37,7 @@ public static class BattleSceneBuilder
         // Boss 演示：用来看 Boss 名字金色标记与「大一号」的观感（v0.1 验收第 4 条）
         // 单波放一起，否则 Boss 要等第一波清完才入场，截图里看不到金色名字
         BuildInto(BossScenePath,
-            new[] { "en_jelly", "en_tigerking", "en_snake" },   // 三档 Boss 同场，用来看品质配色与立绘
+            new[] { "en_bonefish", "en_stonelizard", "en_jelly" },   // 小 Boss 带着两个小跟班（Boss 不会三档同场）
             null);
     }
 
