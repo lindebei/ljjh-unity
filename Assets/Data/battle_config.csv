@@ -34,3 +34,4 @@ maxEnemyActionsPerRound,3
 wavePowerDecay,0.60
 qualityHpScale,1.0|2.15|2.30|2.70|3.10
 qualityAtkScale,1.0|2.75|5.00|5.60|6.20
+ultCooldownRounds,3

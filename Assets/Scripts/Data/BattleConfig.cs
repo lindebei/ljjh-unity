@@ -59,6 +59,9 @@ namespace LingJing.Data
         [Tooltip("同一场里越靠后的波次越弱（0.85 = 每多一波，敌人生命与攻击 ×0.85）；单波不受影响")]
         public float wavePowerDecay = 0.85f;
 
+        [Tooltip("奥义放完后的锁定回合数（3 = 本回合 + 之后两回合内都不许再放，MP 够也不行）")]
+        public int ultCooldownRounds = 3;
+
         [Tooltip("每回合敌方最多行动几次（超出的排队等下一回合；用来避免多波次 10 打 3 的碾压）")]
         public int maxEnemyActionsPerRound = 4;
 

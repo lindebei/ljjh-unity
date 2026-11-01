@@ -52,6 +52,7 @@ MonoBehaviour:
   playerActionsPerRound: 3
   healTalentConstant: 250
   wavePowerDecay: 0.6
+  ultCooldownRounds: 3
   maxEnemyActionsPerRound: 3
   healCapPercent: 0.25
   healSecondRatio: 0.5

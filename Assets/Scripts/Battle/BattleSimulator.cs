@@ -489,6 +489,7 @@ namespace LingJing.Battle
         {
             playerActionsThisRound = 0;
             enemyActionsThisRound = 0;      // 敌方每回合行动配额重置
+            for (int i = 0; i < units.Count; i++) units[i].TickRoundCooldowns();   // 奥义按回合计的冷却
             round++;
             focusThisRound.Clear();      // 怪的目标分散上限每回合重置
 
@@ -861,8 +862,15 @@ namespace LingJing.Battle
             if (cost < 0) actor.mp = Mathf.Min(actor.mpMax, actor.mp + 1);
             else actor.mp = Mathf.Max(0, actor.mp - cost);
 
-            int cd = LingJing.Data.SkillRanks.Cooldown(skill);
-            if (cd > 0) actor.SetCooldown(skill.id, cd);
+            // 奥义（SkillType.Ultimate）用「回合」冷却：放完这回合算起，两回合内不许再放（MP 够也不行）
+            // 注意：tier 4 里既有一转奥义也有后续主动，判据必须看 type 而不是 tier
+            if (skill.type == SkillType.Ultimate)
+                actor.SetRoundCooldown(skill.id, Mathf.Max(1, config.ultCooldownRounds));
+            else
+            {
+                int cd = LingJing.Data.SkillRanks.Cooldown(skill);
+                if (cd > 0) actor.SetCooldown(skill.id, cd);
+            }
             if (skill.taunt) actor.tauntRounds = Mathf.Max(1, skill.controlDuration);
 
             // 治疗（两段式）

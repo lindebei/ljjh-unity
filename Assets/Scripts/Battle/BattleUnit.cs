@@ -68,6 +68,8 @@ namespace LingJing.Battle
 
         public readonly List<StatusInstance> statuses = new List<StatusInstance>();
         public readonly Dictionary<string, int> cooldowns = new Dictionary<string, int>();
+        // 奥义用「回合」计冷却（放完这一回合算起，两回合内不允许再放，MP 够也不行）
+        public readonly Dictionary<string, int> roundCooldowns = new Dictionary<string, int>();
 
         public bool IsAlive { get { return hp > 0f; } }
 
@@ -198,10 +200,30 @@ namespace LingJing.Battle
 
         public float MissingHp { get { return Mathf.Max(0f, maxHp - hp); } }
 
+        public void SetRoundCooldown(string skillId, int rounds)
+        {
+            if (rounds > 0) roundCooldowns[skillId] = rounds;
+        }
+
+        /// <summary>每回合末调用：按回合计的冷却减一。</summary>
+        public void TickRoundCooldowns()
+        {
+            if (roundCooldowns.Count == 0) return;
+            var keys = new List<string>(roundCooldowns.Keys);
+            for (int i = 0; i < keys.Count; i++)
+            {
+                roundCooldowns[keys[i]] -= 1;
+                if (roundCooldowns[keys[i]] <= 0) roundCooldowns.Remove(keys[i]);
+            }
+        }
+
         public float Cooldown(string skillId)
         {
             int v;
-            return cooldowns.TryGetValue(skillId, out v) ? v : 0;
+            float a = cooldowns.TryGetValue(skillId, out v) ? v : 0f;
+            int b;
+            if (roundCooldowns.TryGetValue(skillId, out b) && b > a) a = b;
+            return a;
         }
 
         public void SetCooldown(string skillId, int rounds)

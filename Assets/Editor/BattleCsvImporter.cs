@@ -287,6 +287,7 @@ public static class BattleCsvImporter
             cfg.healCapPercent = GetFloat(map, "healCapPercent", cfg.healCapPercent);
             cfg.maxEnemyActionsPerRound = GetInt(map, "maxEnemyActionsPerRound", cfg.maxEnemyActionsPerRound);
             cfg.wavePowerDecay = GetFloat(map, "wavePowerDecay", cfg.wavePowerDecay);
+            cfg.ultCooldownRounds = GetInt(map, "ultCooldownRounds", cfg.ultCooldownRounds);
             cfg.qualityHpScale = GetFloatArray(Get(map, "qualityHpScale"), cfg.qualityHpScale);
             cfg.qualityAtkScale = GetFloatArray(Get(map, "qualityAtkScale"), cfg.qualityAtkScale);
         cfg.timeCapSeconds = GetFloat(map, "timeCapSeconds", cfg.timeCapSeconds);

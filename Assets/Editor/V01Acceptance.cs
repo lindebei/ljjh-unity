@@ -251,6 +251,27 @@ public static class V01Acceptance
                 string.Format("行动数 {0} → {1}，药品 {2} → {3}", before, after, potionsBefore, sim.potions));
         });
 
+        Check("A-17", "奥义冷却按回合：放完本回合 + 两回合内不许再放（MP 够也不行）", () =>
+        {
+            var cfg = UnityEngine.Object.Instantiate(BattleDatabase.Config);
+            var sim = new BattleSimulator(cfg, 23);
+            var p = sim.AddPlayer(BattleDatabase.GetCreature("beast_water"), 24, new int[6]);
+            var e = sim.AddEnemy(BattleDatabase.GetCreature("en_bonefish"), 10, 1);
+            sim.EndWave();
+            sim.Begin();
+            p.mp = p.mpMax = 20;
+            var ult = BattleDatabase.GetSkill("w_ult");
+            sim.Cast(p, ult, new List<BattleUnit> { e });
+            float cd0 = p.Cooldown("w_ult");
+            p.TickRoundCooldowns(); float cd1 = p.Cooldown("w_ult");
+            p.TickRoundCooldowns(); float cd2 = p.Cooldown("w_ult");
+            p.TickRoundCooldowns(); float cd3 = p.Cooldown("w_ult");
+            UnityEngine.Object.DestroyImmediate(cfg);
+            bool ok = cd0 > 0 && cd1 > 0 && cd2 > 0 && Mathf.Approximately(cd3, 0f) && p.mp >= SkillRanks.Cost(ult);
+            return new R(ok, string.Format("放完 {0} → 第1回合末 {1} → 第2回合末 {2} → 第3回合末 {3}（MP {4} 仍够）",
+                cd0, cd1, cd2, cd3, p.mp));
+        });
+
         sb.AppendLine();
         sb.AppendLine(string.Format("通过 {0} / 失败 {1} / 共 {2}", pass, fail, pass + fail));
         System.IO.File.WriteAllText(@"D:\ljjh\tmp\v01_accept.txt", sb.ToString());
