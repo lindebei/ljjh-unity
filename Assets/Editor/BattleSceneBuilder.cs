@@ -132,6 +132,41 @@ public static class BattleSceneBuilder
         Debug.Log("[BattleSceneBuilder] 场景已生成：" + path);
     }
 
+    // 随机遭遇场景：用 EncounterGenerator 现场配敌人（12 只普通怪都会出场）
+    public const string EncounterScenePath = "Assets/Scenes/BattleEncounter.unity";
+
+    [MenuItem("灵境/生成 BattleEncounter 场景")]
+    public static void BuildEncounterScene()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(EncounterScenePath));
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+        var camGo = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener));
+        camGo.tag = "MainCamera";
+        var cam = camGo.GetComponent<Camera>();
+        cam.clearFlags = CameraClearFlags.SolidColor;
+        cam.backgroundColor = new Color(0.05f, 0.06f, 0.08f, 1f);
+        cam.orthographic = true;
+        camGo.transform.position = new Vector3(0f, 0f, -10f);
+
+        var runner = new GameObject("BattleRunner", typeof(BattleHud));
+        var hud = runner.GetComponent<BattleHud>();
+        hud.playerLevel = 24;
+        hud.enemyLevel = 24;
+        hud.enemyIds = new string[0];
+        hud.enemyIdsWave2 = new string[0];
+        hud.timeScale = 1f;
+        hud.autoBattle = false;
+        hud.useRandomEncounter = true;
+        hud.encounterSeed = 20261101;    // 固定种子，截图可复现
+
+        EditorSceneManager.SaveScene(scene, EncounterScenePath);
+        AddToBuildSettings(EncounterScenePath);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[BattleSceneBuilder] 场景已生成：" + EncounterScenePath);
+    }
+
     static void AddToBuildSettings() { AddToBuildSettings(ScenePath); }
 
     static void AddToBuildSettings(string path)

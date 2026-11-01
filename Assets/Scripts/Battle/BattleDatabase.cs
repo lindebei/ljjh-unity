@@ -150,6 +150,16 @@ namespace LingJing.Battle
             return list;
         }
 
+        /// <summary>按品质筛怪（遭遇生成用）：普通池 / 精英池 / Boss 池。</summary>
+        public static List<CreatureDefinition> EnemiesOfQuality(Quality q)
+        {
+            var list = new List<CreatureDefinition>();
+            var all = GetEnemies();
+            for (int i = 0; i < all.Count; i++)
+                if (all[i].quality == q) list.Add(all[i]);
+            return list;
+        }
+
         public static List<CreatureDefinition> GetPlayers()
         {
             var list = new List<CreatureDefinition>();

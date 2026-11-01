@@ -62,6 +62,13 @@ public static class BattleAutoShot
         Run();
     }
 
+    /// <summary>随机遭遇场景：敌人由 EncounterGenerator 现场生成（固定种子）。</summary>
+    public static void RunEncounter()
+    {
+        ScenePath = "Assets/Scenes/BattleEncounter.unity";
+        Run();
+    }
+
     /// <summary>只截编队面板：故意不跳过编队，所以进 Play 后停在这一屏，截完就退。</summary>
     public static void RunFormation()
     {

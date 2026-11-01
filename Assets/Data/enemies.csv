@@ -10,3 +10,7 @@ en_fox,影尾狐,Wind,100,35,95,110,55,55,Elite
 en_jelly,潮喉水母王,Water,85,60,70,160,60,60,MiniBoss
 en_tigerking,赤脊虎王,Fire,120,70,85,180,55,50,MidBoss
 en_snake,雾潮之主骸蛇,Water,130,80,90,220,70,60,BigBoss
+en_jellyfish,潮喉水母,Water,70,55,85,115,75,55,Normal
+en_greensnake,翠环蛇,Water,85,40,95,110,60,55,Normal
+en_turtle,甲壳龟,Earth,55,90,35,200,50,30,Normal
+en_deer,茸角鹿,Wind,75,40,110,120,65,60,Normal

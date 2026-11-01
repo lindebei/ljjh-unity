@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15110c512158aa543aead707dd125396, type: 3}
+  m_Name: en_jellyfish
+  m_EditorClassIdentifier: Assembly-CSharp::LingJing.Data.CreatureDefinition
+  id: en_jellyfish
+  displayName: "\u6F6E\u5589\u6C34\u6BCD"
+  element: 0
+  isPlayerBeast: 0
+  baseStats:
+    atk: 70
+    def: 55
+    spd: 85
+    vit: 115
+    spr: 75
+    tal: 55
+  potentials:
+    atk: 1
+    def: 1
+    spd: 1
+    vit: 1
+    spr: 1
+    tal: 1
+  skills:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  quality: 0
+  enemySkillSet: Water
+  placeholderColor: {r: 1, g: 1, b: 1, a: 1}

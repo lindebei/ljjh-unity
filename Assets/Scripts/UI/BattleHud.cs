@@ -19,6 +19,12 @@ namespace LingJing.UI
         public string[] enemyIds = { "en_bonefish", "en_stonelizard", "en_bird" };
         [Tooltip("可选：第二波敌人 id。留空就是单波战斗。")]
         public string[] enemyIdsWave2 = new string[0];
+
+        [Header("随机遭遇（一境）")]
+        [Tooltip("打开后忽略 enemyIds / enemyIdsWave2，改用 EncounterGenerator 现场生成")]
+        public bool useRandomEncounter = false;
+        [Tooltip("遭遇随机种子：同一个种子出同一场，0 表示按时间随机")]
+        public int encounterSeed = 0;
         public float timeScale = 1f;
         public bool autoBattle;
 
@@ -78,6 +84,7 @@ namespace LingJing.UI
         GameObject formationPanel;         // 开战前的编队面板（4 选 3，开战后不再给入口）
         readonly List<string> picked = new List<string>();   // 编队选中的 3 只
         bool battleStarted;
+        string lastEncounterText = "";
 
         float tickAccumulator;
         bool finishShown;
@@ -343,10 +350,27 @@ namespace LingJing.UI
                 sim.AddPlayer(def, playerLevel, free, gear);
             }
 
-            int band = cfg.BandIndex(enemyLevel);
-            AddEnemyWave(band, enemyIds);
-            // 可选第二波：填了 enemyIdsWave2 就变成两波战斗（一波清完不判胜利）
-            if (enemyIdsWave2 != null && enemyIdsWave2.Length > 0) AddEnemyWave(band, enemyIdsWave2);
+            if (useRandomEncounter)
+            {
+                int seed = encounterSeed != 0 ? encounterSeed : System.Environment.TickCount;
+                var rng = new System.Random(seed);
+                var enc = EncounterGenerator.Roll(playerLevel, cfg.BandIndex(playerLevel), rng);
+                enemyLevel = enc.level;
+                for (int w = 0; w < enc.waves.Count; w++)
+                {
+                    int b = cfg.BandIndex(enc.level);
+                    AddEnemyWave(b, enc.waves[w]);
+                }
+                lastEncounterText = EncounterGenerator.Describe(enc);
+                Debug.Log("[BattleHud] 随机遭遇（seed " + seed + "）：" + lastEncounterText);
+            }
+            else
+            {
+                int band = cfg.BandIndex(enemyLevel);
+                AddEnemyWave(band, enemyIds);
+                // 可选第二波：填了 enemyIdsWave2 就变成两波战斗（一波清完不判胜利）
+                if (enemyIdsWave2 != null && enemyIdsWave2.Length > 0) AddEnemyWave(band, enemyIdsWave2);
+            }
 
             sim.Begin();
             sim.ActionStarted += OnActionStarted;
