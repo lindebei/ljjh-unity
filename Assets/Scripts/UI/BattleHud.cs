@@ -54,6 +54,13 @@ namespace LingJing.UI
         Text spiritText;
         Text potionText;
         Text statusBanner;
+
+        // 技能按钮 / 药品按钮上的图标（程序生成，见 Assets/Resources/Art/Icons）
+        readonly Image[] skillIcons = new Image[4];
+        Image potionIcon;
+        readonly Dictionary<string, Sprite> iconCache = new Dictionary<string, Sprite>();
+        readonly Dictionary<BattleUnit, Transform> statusRows = new Dictionary<BattleUnit, Transform>();
+        readonly Dictionary<BattleUnit, string> statusSignatures = new Dictionary<BattleUnit, string>();
         RectTransform floatLayer;
         Button[] skillButtons = new Button[4];
         Text[] skillLabels = new Text[4];
@@ -216,9 +223,15 @@ namespace LingJing.UI
                 btn.onClick.AddListener(() => OnSkillClicked(idx));
                 skillButtons[i] = btn;
                 skillLabels[i] = btn.GetComponentInChildren<Text>();
+                skillIcons[i] = AddButtonIcon(btn, 66f, 12f);
+                IndentLabel(skillLabels[i], 84f);
             }
             potionButton = MakeButton(bar.transform, "PotionBtn", "药品\n(35% 血)", new Vector2(660f, 0f), new Vector2(180f, 130f));
             potionButton.onClick.AddListener(OnPotionClicked);
+            potionIcon = AddButtonIcon(potionButton, 52f, 10f);
+            potionIcon.sprite = LoadIcon("potion");
+            potionIcon.enabled = potionIcon.sprite != null;   // AddButtonIcon 默认是隐藏的
+            IndentLabel(potionButton.GetComponentInChildren<Text>(), 66f);
 
             // 自动战斗：设计文档要求「等级 ≥15 才解锁」，低于 15 级置灰并写明原因
             autoButton = MakeButton(canvasGo.transform, "AutoBtn", "", new Vector2(0f, 0f), new Vector2(240f, 56f));
@@ -504,6 +517,12 @@ namespace LingJing.UI
                     : string.Format("{0}\n<{1}> 灵能{2}", skill.displayName, SlotName(i), cost);
                 skillLabels[i].color = new Color(0.45f, 0.45f, 0.45f);
                 skillButtons[i].interactable = false;
+                if (skillIcons[i] != null)
+                {
+                    skillIcons[i].sprite = hasSkill ? LoadIcon(skill.id) : null;
+                    skillIcons[i].enabled = hasSkill;
+                    skillIcons[i].color = new Color(0.55f, 0.55f, 0.55f, 0.75f);
+                }
             }
         }
 
@@ -533,6 +552,7 @@ namespace LingJing.UI
                 var card = MakePanel(row, "Card_" + u.id, isPlayer ? new Color(0.16f, 0.22f, 0.30f, 1f) : new Color(0.30f, 0.16f, 0.16f, 1f));
                 card.rectTransform.sizeDelta = new Vector2(cw, ch);
                 cardRects[u] = card.rectTransform;
+                BuildStatusRow(u, card.rectTransform);
                 cardImages[u] = card;
                 cardBaseColors[u] = card.color;
                 var le = card.gameObject.AddComponent<LayoutElement>();
@@ -540,6 +560,22 @@ namespace LingJing.UI
                 le.preferredHeight = ch;
 
                 // 立绘：卡片左侧 150x150，等比缩放（没有图就只留空白，不影响其它布局）
+                // Boss 想要「看起来更压场」但不换美术：立绘放大 12% + 背后加一圈品质色光晕。
+                bool isBossCard = !isPlayer && u.quality >= Quality.MiniBoss;
+                if (isBossCard)
+                {
+                    var aura = new GameObject("Aura", typeof(Image)).GetComponent<Image>();
+                    aura.transform.SetParent(card.transform, false);
+                    aura.sprite = MakeRadialSprite(QualityColor(u.quality) * 0.55f, new Color(0f, 0f, 0f, 0f), 96);
+                    aura.raycastTarget = false;
+                    var art = aura.rectTransform;
+                    art.anchorMin = new Vector2(0f, 0f);
+                    art.anchorMax = new Vector2(0f, 0f);
+                    art.pivot = new Vector2(0f, 0f);
+                    art.sizeDelta = new Vector2(pw * 1.5f, (ch - 30f) * 1.5f);
+                    art.anchoredPosition = new Vector2(-pw * 0.22f, -ch * 0.20f);
+                }
+
                 var portrait = new GameObject("Portrait", typeof(Image)).GetComponent<Image>();
                 portrait.transform.SetParent(card.transform, false);
                 portrait.sprite = LoadPortrait(u.id);
@@ -550,8 +586,8 @@ namespace LingJing.UI
                 prt.anchorMin = new Vector2(0f, 0f);
                 prt.anchorMax = new Vector2(0f, 0f);
                 prt.pivot = new Vector2(0f, 0f);
-                prt.sizeDelta = new Vector2(pw, ch - 30f);
-                prt.anchoredPosition = new Vector2(10f, 14f);
+                prt.sizeDelta = isBossCard ? new Vector2(pw * 1.12f, (ch - 30f) * 1.12f) : new Vector2(pw, ch - 30f);
+                prt.anchoredPosition = isBossCard ? new Vector2(2f, 4f) : new Vector2(10f, 14f);
                 portraits[u] = portrait;
 
                 // 名字 + 血条排在立绘右边
@@ -808,6 +844,12 @@ namespace LingJing.UI
                 skillLabels[i].text = !hasSkill ? "—"
                     : string.Format("{0}\n<{1}> 灵能{2}", skill.displayName, SlotName(i), cost);
                 skillLabels[i].color = usable ? Color.white : new Color(0.45f, 0.45f, 0.45f);
+                if (skillIcons[i] != null)
+                {
+                    skillIcons[i].sprite = hasSkill ? LoadIcon(skill.id) : null;
+                    skillIcons[i].enabled = hasSkill;
+                    skillIcons[i].color = usable ? Color.white : new Color(0.55f, 0.55f, 0.55f, 0.8f);
+                }
             }
             potionButton.interactable = sim.potions > 0;
         }
@@ -864,6 +906,7 @@ namespace LingJing.UI
                 {
                     powerTexts[u].text = "战力 " + Mathf.RoundToInt(u.power);
                 }
+                UpdateStatusIcons(u);
 
                 // 卡片显示规则：我方一直显示（死了压暗）；敌方必须已入场且还活着。
                 // 一波清完立刻收尸，否则第二波进场时上一波的卡还占着位置（4+3 波就会出现 6 张卡）。
@@ -1220,6 +1263,118 @@ namespace LingJing.UI
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
             return (back.rectTransform, rt);
+        }
+
+        // ---------------------------------------------------------------- 图标
+
+        Sprite LoadIcon(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return null;
+            Sprite s;
+            if (iconCache.TryGetValue(id, out s)) return s;
+            s = Resources.Load<Sprite>("Art/Icons/Skills/" + id);
+            if (s == null) s = Resources.Load<Sprite>("Art/Icons/Status/" + id);
+            iconCache[id] = s;
+            return s;
+        }
+
+        Image AddButtonIcon(Button btn, float size, float pad)
+        {
+            var go = new GameObject("Icon", typeof(Image));
+            go.transform.SetParent(btn.transform, false);
+            var img = go.GetComponent<Image>();
+            img.raycastTarget = false;
+            img.preserveAspect = true;
+            img.enabled = false;
+            var rt = img.rectTransform;
+            rt.anchorMin = new Vector2(0f, 0.5f);
+            rt.anchorMax = new Vector2(0f, 0.5f);
+            rt.pivot = new Vector2(0f, 0.5f);
+            rt.sizeDelta = new Vector2(size, size);
+            rt.anchoredPosition = new Vector2(pad, 0f);
+            return img;
+        }
+
+        /// <summary>按钮文字让出左侧图标的位置（默认文字是整体居中的）。</summary>
+        static void IndentLabel(Text label, float left)
+        {
+            if (label == null) return;
+            var rt = label.rectTransform;
+            rt.anchorMin = new Vector2(0f, 0f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.offsetMin = new Vector2(left, 6f);
+            rt.offsetMax = new Vector2(-6f, -6f);
+        }
+
+        static string StatusIconId(StatusType t)
+        {
+            switch (t)
+            {
+                case StatusType.Wet: return "st_wet";
+                case StatusType.WindErosion: return "st_wind";
+                case StatusType.Petrify: return "st_rock";
+                case StatusType.HealMark: return "st_heal";
+                case StatusType.Burn: return "st_burn";
+                case StatusType.Poison: return "st_poison";
+                default: return null;
+            }
+        }
+
+        void BuildStatusRow(BattleUnit u, RectTransform card)
+        {
+            var go = new GameObject("StatusRow", typeof(RectTransform));
+            go.transform.SetParent(card, false);
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(1f, 1f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(1f, 1f);
+            rt.sizeDelta = new Vector2(150f, 26f);
+            rt.anchoredPosition = new Vector2(-8f, -8f);
+            statusRows[u] = go.transform;
+        }
+
+        /// <summary>状态图标只在状态集合变化时重建，别每帧 Destroy/Instantiate。</summary>
+        void UpdateStatusIcons(BattleUnit u)
+        {
+            Transform row;
+            if (!statusRows.TryGetValue(u, out row) || row == null) return;
+
+            string sig = "";
+            for (int i = 0; i < u.statuses.Count; i++)
+                sig += ((int)u.statuses[i].type) + "x" + u.statuses[i].stacks + ";";
+
+            string old;
+            if (statusSignatures.TryGetValue(u, out old) && old == sig) return;
+            statusSignatures[u] = sig;
+
+            for (int i = row.childCount - 1; i >= 0; i--) Destroy(row.GetChild(i).gameObject);
+
+            const float size = 26f;
+            float x = 0f;
+            int drawn = 0;
+            for (int i = 0; i < u.statuses.Count && drawn < 5; i++)
+            {
+                string id = StatusIconId(u.statuses[i].type);
+                if (id == null) continue;
+                var sprite = LoadIcon(id);
+                if (sprite == null) continue;
+
+                var go = new GameObject("S_" + id, typeof(Image));
+                go.transform.SetParent(row, false);
+                var img = go.GetComponent<Image>();
+                img.sprite = sprite;
+                img.raycastTarget = false;
+                img.preserveAspect = true;
+                var rt = img.rectTransform;
+                rt.anchorMin = new Vector2(1f, 1f);
+                rt.anchorMax = new Vector2(1f, 1f);
+                rt.pivot = new Vector2(1f, 1f);
+                rt.sizeDelta = new Vector2(size, size);
+                rt.anchoredPosition = new Vector2(-x, 0f);
+                x += size + 3f;
+                drawn++;
+            }
         }
 
         Button MakeButton(Transform parent, string name, string label, Vector2 pos, Vector2 size)
