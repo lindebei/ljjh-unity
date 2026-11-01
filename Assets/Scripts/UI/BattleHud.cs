@@ -42,6 +42,7 @@ namespace LingJing.UI
         readonly Dictionary<BattleUnit, RectTransform> gaugeMarkers = new Dictionary<BattleUnit, RectTransform>();
         readonly Dictionary<BattleUnit, Image> gaugeMarkerBgs = new Dictionary<BattleUnit, Image>();
         RectTransform gaugeTrack;
+        RectTransform gaugePanelRect;
         readonly Dictionary<BattleUnit, RectTransform> mpFills = new Dictionary<BattleUnit, RectTransform>();
         readonly Dictionary<BattleUnit, Text> mpTexts = new Dictionary<BattleUnit, Text>();
         Text mpPotionText;
@@ -190,11 +191,12 @@ namespace LingJing.UI
             // 行动条：横向一条跑道（用户要求「都在一条直线上，谁跑得快就到谁攻击」）
             var gaugePanel = MakePanel(canvasGo.transform, "GaugePanel", new Color(0.10f, 0.11f, 0.14f, 0.95f));
             var gp = gaugePanel.rectTransform;
+            gaugePanelRect = gp;
             gp.anchorMin = new Vector2(0f, 1f);
             gp.anchorMax = new Vector2(1f, 1f);
             gp.pivot = new Vector2(0.5f, 1f);
-            gp.anchoredPosition = new Vector2(0f, -40f);
-            gp.sizeDelta = new Vector2(-700f, 46f);   // 顶栏正下方一条窄带，敌方卡从 y=100 开始
+            gp.anchoredPosition = new Vector2(0f, -60f);
+            gp.sizeDelta = new Vector2(-860f, 54f);   // 左右各留 410：避开顶栏文字与右上角自动战斗按钮
 
             MakeText(gaugePanel.transform, "GaugeTitle", "行动条", 16, new Color(0.75f, 0.8f, 0.9f),
                 TextAnchor.MiddleLeft, new Vector2(0f, 0.5f), new Vector2(90f, 20f), new Vector2(0f, 0.5f), new Vector2(-96f, 0f));
@@ -208,26 +210,27 @@ namespace LingJing.UI
             gaugeTrack.anchoredPosition = new Vector2(0f, 2f);
             gaugeTrack.sizeDelta = new Vector2(-130f, 8f);
 
+            // 出手线在左端：徽标从右往左滚，滚到这条线就出手
             var finish = MakePanel(gaugePanel.transform, "Finish", new Color(1f, 0.85f, 0.45f, 0.9f));
             var fr = finish.rectTransform;
-            fr.anchorMin = new Vector2(1f, 0.5f);
-            fr.anchorMax = new Vector2(1f, 0.5f);
-            fr.pivot = new Vector2(1f, 0.5f);
+            fr.anchorMin = new Vector2(0f, 0.5f);
+            fr.anchorMax = new Vector2(0f, 0.5f);
+            fr.pivot = new Vector2(0f, 0.5f);
             fr.sizeDelta = new Vector2(5f, 46f);
-            fr.anchoredPosition = new Vector2(-27f, 4f);
-            MakeText(finish.transform, "FinishLabel", "出手", 14, new Color(1f, 0.85f, 0.45f), TextAnchor.MiddleRight,
-                new Vector2(1f, 1f), new Vector2(60f, 20f), new Vector2(1f, 1f), new Vector2(0f, 22f));
+            fr.anchoredPosition = new Vector2(64f, 2f);
+            MakeText(finish.transform, "FinishLabel", "出手", 14, new Color(1f, 0.85f, 0.45f), TextAnchor.MiddleLeft,
+                new Vector2(0f, 0f), new Vector2(60f, 18f), new Vector2(0f, 0f), new Vector2(0f, -4f));
 
             // 上：敌方（怪物在上，贴顶部）；下：我方（自己的兽在底部，紧贴技能栏）
-            enemyRow = MakeRow(canvasGo.transform, "Enemies", new Vector2(340f, 112f), new Vector2(1500f, 200f));
+            enemyRow = MakeRow(canvasGo.transform, "Enemies", new Vector2(340f, 124f), new Vector2(1500f, 200f));
             playerRow = MakeRow(canvasGo.transform, "Players", new Vector2(340f, 660f), new Vector2(1500f, 200f));
 
             // MP 改成每只兽一张蓝条（画在卡片里，见 BuildUnitWidgets）——用户明确不要统一 MP
             // 回合数与药品数：顶栏一排（MP 已经改成每只兽卡片里的蓝条，这里不再放全局蓝条）
             spiritText = MakeText(canvasGo.transform, "Round", "回合 1/30", 22, new Color(0.8f, 0.88f, 1f), TextAnchor.MiddleLeft,
-                new Vector2(0f, 1f), new Vector2(300f, 30f), new Vector2(0f, 1f), new Vector2(352f, -6f));
+                new Vector2(0f, 1f), new Vector2(300f, 30f), new Vector2(0f, 1f), new Vector2(352f, -2f));
             potionText = MakeText(canvasGo.transform, "Potion", "药品 8", 22, new Color(0.85f, 0.9f, 0.7f), TextAnchor.MiddleLeft,
-                new Vector2(0f, 1f), new Vector2(260f, 30f), new Vector2(0f, 1f), new Vector2(676f, -6f));
+                new Vector2(0f, 1f), new Vector2(260f, 30f), new Vector2(0f, 1f), new Vector2(676f, -2f));
 
             // 横幅放在「我方行」与「敌方行」之间的空档里（320–690 那条带），别压到血条卡片上
             statusBanner = MakeText(canvasGo.transform, "Banner", "", 34, new Color(1f, 0.9f, 0.5f), TextAnchor.MiddleCenter,
@@ -346,6 +349,7 @@ namespace LingJing.UI
             sim.Begin();
             sim.ActionStarted += OnActionStarted;
             BuildUnitWidgets();
+            RaiseGaugePanel();
             RefreshAll();
             PrimeSkillLabels();
 
@@ -710,7 +714,7 @@ namespace LingJing.UI
                 mr.anchorMin = new Vector2(0f, 0.5f);
                 mr.anchorMax = new Vector2(0f, 0.5f);
                 mr.pivot = new Vector2(0.5f, 0.5f);
-                mr.sizeDelta = new Vector2(38f, 38f);
+                mr.sizeDelta = new Vector2(34f, 34f);
                 mr.anchoredPosition = new Vector2(0f, 6f);
                 gaugeMarkers[u] = mr;
                 gaugeMarkerBgs[u] = markBg;
@@ -1031,9 +1035,9 @@ namespace LingJing.UI
                     // 跑道宽度 = 父节点宽度，按行动值比例摆；同分时我方略高一档，避免完全重叠
                     float t = Mathf.Clamp01(u.gauge / Mathf.Max(1f, sim.config.gaugeThreshold));
                     var parentW = gaugeTrack.rect.width;
-                    float x = Mathf.Lerp(19f, parentW - 19f, t);
+                    float x = Mathf.Lerp(parentW - 19f, 19f, t);   // 从右往左滚，左边是出手线
                     // 两车道交错：行动值接近时两个徽标不会完全叠在一起
-                    float lane = (i % 2 == 0) ? 10f : -10f;
+                    float lane = (i % 2 == 0) ? 7f : -7f;
                     gaugeMarkers[u].anchoredPosition = new Vector2(x, 4f + lane);
                     bool acting = sim.awaitingPlayer == u;
                     gaugeMarkerBgs[u].color = acting ? new Color(1f, 0.85f, 0.45f, 1f)
@@ -1475,6 +1479,14 @@ namespace LingJing.UI
                 case StatusType.Poison: return "st_poison";
                 default: return null;
             }
+        }
+
+        /// <summary>把行动条提到卡片之上，免得被敌方卡片盖住（飘字层仍然最上）。</summary>
+        void RaiseGaugePanel()
+        {
+            if (gaugePanelRect == null || canvasRect == null) return;
+            int top = canvasRect.childCount - 1;          // 最后一个子物体是飘字层
+            gaugePanelRect.SetSiblingIndex(Mathf.Max(0, top - 1));
         }
 
         void BuildStatusRow(BattleUnit u, RectTransform card)
