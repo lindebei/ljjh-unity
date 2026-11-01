@@ -39,8 +39,8 @@ namespace LingJing.EditorTools
             var cfgBase = BattleDatabase.Config;
             if (cfgBase == null) { Debug.LogError("[QualitySweep] 没有 BattleConfig"); return; }
 
-            var elites = new[] { 2.6f, 3.0f, 3.4f, 3.8f, 4.2f };
-            var bosses = new[] { 3.2f, 3.8f, 4.4f, 5.0f, 5.6f };
+            var elites = new[] { 2.15f, 3f, 4f, 5f, 6f };
+            var bosses = new[] { 2.3f, 4f, 6f, 8f, 10f };
 
             var scElite = new[] { new[] { "en_bird", "en_fox" } };
             int eliteLevel = 11;
@@ -50,9 +50,9 @@ namespace LingJing.EditorTools
             foreach (var e in elites)
             {
                 var cfg = Object.Instantiate(cfgBase);
-                var hp = (float[])cfg.qualityHpScale.Clone();
-                hp[(int)Quality.Elite] = e;
-                cfg.qualityHpScale = hp;
+                var atk = (float[])cfg.qualityAtkScale.Clone();
+                atk[(int)Quality.Elite] = e;
+                cfg.qualityAtkScale = atk;
                 float wr = WinRate(cfg, scElite, eliteLevel);
                 Object.DestroyImmediate(cfg);
                 sb.AppendLine("elite " + e.ToString("0.00") + "\t" + wr.ToString("0.0") + "%");
@@ -62,9 +62,9 @@ namespace LingJing.EditorTools
             foreach (var b in bosses)
             {
                 var cfg = Object.Instantiate(cfgBase);
-                var hp = (float[])cfg.qualityHpScale.Clone();
-                hp[(int)Quality.MiniBoss] = b;
-                cfg.qualityHpScale = hp;
+                var atk = (float[])cfg.qualityAtkScale.Clone();
+                atk[(int)Quality.MiniBoss] = b;
+                cfg.qualityAtkScale = atk;
                 float wr = WinRate(cfg, scBoss, bossLevel);
                 Object.DestroyImmediate(cfg);
                 sb.AppendLine("miniboss " + b.ToString("0.00") + "\t" + wr.ToString("0.0") + "%");

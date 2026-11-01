@@ -23,7 +23,8 @@ namespace LingJing.Data
         Petrify = 3,      // 岩化：防御 +30%，2 回合（自身增益）
         HealMark = 4,     // 治愈：下一回合开始回第一段的一半（自身增益，1 段）
         Burn = 5,         // 灼烧：每层每回合 0.5% 最大生命，最多 15 层，3 回合（敌方减益）
-        Poison = 6        // 中毒：同上，与灼烧独立叠层
+        Poison = 6,       // 中毒：同上，与灼烧独立叠层
+        HealDown = 7      // 减疗：受到的治疗 −50%，2 回合（敌方减益，精英与 Boss 的破续航手段）
     }
 
     public enum Quality { Normal = 0, Elite = 1, MiniBoss = 2, MidBoss = 3, BigBoss = 4 }
@@ -51,7 +52,7 @@ namespace LingJing.Data
     {
         public static bool IsDebuff(StatusType t)
         {
-            return t == StatusType.Burn || t == StatusType.Poison;
+            return t == StatusType.Burn || t == StatusType.Poison || t == StatusType.HealDown;
         }
 
         public static Color ToColor(StatusType t)
@@ -64,6 +65,7 @@ namespace LingJing.Data
                 case StatusType.HealMark: return new Color(0.45f, 1f, 0.7f);
                 case StatusType.Burn: return new Color(1f, 0.45f, 0.25f);
                 case StatusType.Poison: return new Color(0.65f, 0.35f, 0.95f);
+                case StatusType.HealDown: return new Color(0.55f, 0.30f, 0.30f);
             }
             return Color.white;
         }

@@ -84,6 +84,20 @@ MonoBehaviour:
   - 2.3
   - 2.7
   - 3.1
+  enemyHealDownChance: 0.45
+  enemyHealDownRounds: 2
+  qualityHpScale:
+  - 1
+  - 2.15
+  - 2.3
+  - 2.7
+  - 3.1
+  qualityAtkScale:
+  - 1
+  - 2.15
+  - 2.3
+  - 2.7
+  - 3.1
   aoeDamageScale: 2
   waveClearHealPercent: 0.18
   waveClearSpirit: 3

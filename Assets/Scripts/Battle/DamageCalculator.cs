@@ -57,11 +57,13 @@ namespace LingJing.Battle
             return dmg;
         }
 
-        /// <summary>治疗第一段系数：天赋/(天赋+250)，湿润再 ×1.25。</summary>
-        public float HealFirstRatio(BattleUnit healer)
+        /// <summary>治疗第一段系数：天赋/(天赋+250)，湿润再 ×1.25，被减疗时腰斩。</summary>
+        public float HealFirstRatio(BattleUnit healer, BattleUnit target)
         {
             float coef = healer.stats.tal / (healer.stats.tal + config.healTalentConstant);
             if (healer.HasStatus(StatusType.Wet)) coef *= 1.25f;
+            // 减疗：精英与 Boss 的破续航手段——治疗量掉一半，治疗不再一对一无敌
+            if (target != null && target.HasStatus(StatusType.HealDown)) coef *= 0.5f;
             return coef;
         }
     }

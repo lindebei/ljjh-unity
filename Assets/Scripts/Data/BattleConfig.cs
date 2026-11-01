@@ -84,6 +84,9 @@ namespace LingJing.Data
         // · qualityHpScale 只管血，控制「一场能打多久」
         // · qualityAtkScale 只管攻，控制「有多危险」
         // 只用一个系数会同时拉两条曲线，胜负被 30 回合上限左右（要么秒掉、要么打不完，没有中间态）
+        // 精英/Boss 的破续航：每次命中按概率给对方挂「减疗（治疗 −50%）」
+        [Range(0f, 1f)] public float enemyHealDownChance = 0.45f;
+        public int enemyHealDownRounds = 2;
         public float[] qualityHpScale = { 1f, 2.15f, 2.30f, 2.70f, 3.10f };
         public float[] qualityAtkScale = { 1f, 2.15f, 2.30f, 2.70f, 3.10f };
 

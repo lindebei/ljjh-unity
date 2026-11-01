@@ -857,12 +857,12 @@ namespace LingJing.Battle
             if (skill.isHeal)
             {
                 var healTargets = skill.healAllAllies ? Alive(Side.Player) : targets;
-                float ratio = calc.HealFirstRatio(actor);
+                // 系数按「每个目标」单独算：减疗（HealDown）是挂在被治疗者身上的
                 for (int i = 0; i < healTargets.Count; i++)
                 {
                     var t = healTargets[i];
                     if (!t.IsAlive) continue;
-                    float first = t.MissingHp * ratio;
+                    float first = t.MissingHp * calc.HealFirstRatio(actor, t);
                     float healed = t.Heal(first);
                     t.ApplyStatus(StatusType.HealMark, 1, 2, healed * config.healSecondRatio, config.dotMaxStacks);
                     if (skill.dispelOne) t.ClearOneDebuff();
