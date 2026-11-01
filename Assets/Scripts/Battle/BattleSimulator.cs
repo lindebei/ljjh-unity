@@ -24,8 +24,8 @@ namespace LingJing.Battle
         /// <summary>交互模式下正在等玩家操作的自己人。</summary>
         public BattleUnit awaitingPlayer;
 
-        public int spirit;
         public int potions;
+        public int mpPotions;      // 蓝瓶数量（回 MP，占一次行动）
         public float time;
         public int round = 1;
         public int playerActionsTotal;
@@ -57,7 +57,6 @@ namespace LingJing.Battle
         public float lastEquipPower;
 
         /// <summary>本场灵能上限 = 配置值 + 装备给的 +N（取全队最大）。</summary>
-        public int spiritMax;
 
         public BattleSimulator(BattleConfig config, int seed = 20261031)
         {
@@ -158,7 +157,6 @@ namespace LingJing.Battle
         /// <summary>开场：算归一系数（我方开场速度均值，整场锁死）、灵能起手、药品数。</summary>
         public void Begin()
         {
-            spiritMax = config.spiritMax;
             var players = Alive(Side.Player);
             float sumSpd = 0f, sumSpr = 0f;
             for (int i = 0; i < players.Count; i++)
@@ -169,8 +167,15 @@ namespace LingJing.Battle
             meanSpd = players.Count > 0 ? sumSpd / players.Count : 100f;
             meanSpr = players.Count > 0 ? sumSpr / players.Count : 60f;
 
-            spirit = BattleFormulas.SpiritStart(meanSpr);
+            for (int i = 0; i < units.Count; i++)
+            {
+                var u = units[i];
+                if (u.side != Side.Player) continue;
+                u.mpMax = BattleFormulas.MpMax(u.stats.spr);
+                u.mp = u.mpMax;                        // 开局满蓝（用户要求）
+            }
             potions = config.potionsPerBattle;
+            mpPotions = config.mpPotionsPerBattle;
             time = 0f;
             round = 1;
             playerActionsThisRound = 0;
@@ -184,8 +189,8 @@ namespace LingJing.Battle
             currentWave = 0;
             SpawnWave(0);
 
-            Log(string.Format("开场：我方速度均值 {0:F0}，精神均值 {1:F0}，初始灵能 {2}/{3}，药品 {4} 个，共 {5} 波",
-                meanSpd, meanSpr, spirit, spiritMax, potions, Mathf.Max(1, waves.Count)));
+            Log(string.Format("开场：我方速度均值 {0:F0}，精神均值 {1:F0}，开局 MP {2}，药品 {3} 个，共 {4} 波",
+                meanSpd, meanSpr, units.Count > 0 ? units[0].mp : 0, potions, Mathf.Max(1, waves.Count)));
         }
 
         /// <summary>关闭当前波次：之后 AddEnemy 的敌人都归到下一波。</summary>
@@ -213,7 +218,12 @@ namespace LingJing.Battle
                     float heal = allies[i].maxHp * config.waveClearHealPercent;
                     if (heal > 0f) allies[i].Heal(heal);
                 }
-                spirit = Mathf.Min(spiritMax, spirit + config.waveClearSpirit);
+                for (int i = 0; i < units.Count; i++)
+            {
+                var u = units[i];
+                if (u.side != Side.Player || !u.IsAlive) continue;
+                u.mp = Mathf.Min(u.mpMax, u.mp + config.waveClearSpirit);
+            }
                 Log(string.Format("第 {0}/{1} 波入场：{2} 只（我方回复 {3:P0} 生命、灵能 +{4}）",
                     index + 1, waves.Count, list.Count, config.waveClearHealPercent, config.waveClearSpirit));
             }
@@ -309,6 +319,47 @@ namespace LingJing.Battle
             TakeAction(actor);
             CollectLoot();
             return true;
+        }
+
+        /// <summary>UI 在等待玩家时调用，并指定打谁（单体技能用；给 null 就按默认目标规则挑）。</summary>
+        public void ResolvePlayerTurn(SkillDefinition skill, BattleUnit chosenTarget)
+        {
+            var actor = awaitingPlayer;
+            awaitingPlayer = null;
+            if (actor == null || !actor.IsAlive) return;
+
+            if (skill == null) { ResolvePlayerTurnInternal(actor, null, null); return; }
+
+            playerActionsTotal++;
+            playerActionsThisRound++;
+
+            List<BattleUnit> targets;
+            if (chosenTarget != null && chosenTarget.IsAlive && chosenTarget.inField)
+                targets = new List<BattleUnit> { chosenTarget };
+            else
+                targets = PickPlayerTargets(actor, skill);
+
+            Cast(actor, skill, targets);
+            CollectLoot();
+            AfterAction(actor);
+        }
+
+        void ResolvePlayerTurnInternal(BattleUnit actor, SkillDefinition skill, List<BattleUnit> targets)
+        {
+            if (skill == null)
+            {
+                skill = actor.def.Skill(SkillType.Basic);
+                if (skill == null)
+                {
+                    Log(actor.displayName + " 没有可用技能，跳过");
+                    actor.gauge = 0f;
+                    AfterAction(actor);
+                    return;
+                }
+            }
+            Cast(actor, skill, targets ?? PickPlayerTargets(actor, skill));
+            CollectLoot();
+            AfterAction(actor);
         }
 
         /// <summary>UI 在等待玩家时调用：用指定技能结算这个行动。</summary>
@@ -480,8 +531,13 @@ namespace LingJing.Battle
                 int regen = BattleFormulas.SpiritRegen(meanSpr);
                 if (regen > 0)
                 {
-                    spirit = Mathf.Min(spiritMax, spirit + regen);
-                    Log(string.Format("回合{0} 灵能自然回复 +{1} → {2}", round, regen, spirit));
+                    for (int i = 0; i < units.Count; i++)
+                    {
+                        var u = units[i];
+                        if (u.side != Side.Player || !u.IsAlive) continue;
+                        u.mp = Mathf.Min(u.mpMax, u.mp + regen);
+                    }
+                    Log(string.Format("回合{0} MP 自然回复 +{1}", round, regen));
                 }
             }
 
@@ -491,6 +547,47 @@ namespace LingJing.Battle
         // ------------------------------------------------------------------ 玩家侧
 
         /// <summary>自动战斗/UI 共用：现在该不该喝药（有人低于阈值且还有药）。</summary>
+        /// <summary>该不该喝蓝瓶：有蓝瓶、且某个要出奥义/主动的我方蓝不够。</summary>
+        public bool ShouldUseMpPotion()
+        {
+            if (mpPotions <= 0) return false;
+            var actor = awaitingPlayer;
+            if (actor != null) return actor.mp < Mathf.Min(4, actor.mpMax) && actor.mp < actor.mpMax;
+            for (int i = 0; i < units.Count; i++)
+            {
+                var u = units[i];
+                if (u.side == Side.Player && u.IsAlive && u.mp < u.mpMax * 0.4f) return true;
+            }
+            return false;
+        }
+
+        /// <summary>喝蓝瓶：回 MP，占掉这次行动。</summary>
+        public void ResolvePlayerMpPotion()
+        {
+            var actor = awaitingPlayer;
+            awaitingPlayer = null;
+            if (actor == null || !actor.IsAlive) return;
+            if (!TryUseMpPotion(actor))
+            {
+                Log("没有蓝瓶了");
+                awaitingPlayer = actor;
+                return;
+            }
+            playerActionsTotal++;
+            playerActionsThisRound++;
+            AfterAction(actor);
+        }
+
+        bool TryUseMpPotion(BattleUnit actor)
+        {
+            if (mpPotions <= 0) return false;
+            int before = actor.mp;
+            actor.mp = Mathf.Min(actor.mpMax, actor.mp + config.mpPotionRestore);
+            mpPotions--;
+            Log(string.Format("{0} 喝魔药：MP {1} → {2}（剩 {3} 瓶）", actor.displayName, before, actor.mp, mpPotions));
+            return true;
+        }
+
         public bool ShouldUsePotion()
         {
             if (potions <= 0) return false;
@@ -546,14 +643,14 @@ namespace LingJing.Battle
                 if (aoe != null) return aoe;
             }
 
-            bool ultReady = ult != null && actor.Cooldown(ult.id) <= 0 && spirit >= ult.spiritCost;
+            bool ultReady = ult != null && actor.Cooldown(ult.id) <= 0 && actor.mp >= ult.spiritCost;
 
             // 水灵：治疗优先，两三个人半血才交奥义
             if (actor.id == "beast_water")
             {
                 if (ultReady && lowAllies >= 2) return ult;
-                if (support != null && spirit >= support.spiritCost && lowAllies >= 1) return support;
-                if (active != null && spirit >= active.spiritCost) return active;
+                if (support != null && actor.mp >= support.spiritCost && lowAllies >= 1) return support;
+                if (active != null && actor.mp >= active.spiritCost) return active;
                 return basic;
             }
 
@@ -561,14 +658,14 @@ namespace LingJing.Battle
             if (actor.id == "beast_earth")
             {
                 if (ultReady) return ult;
-                if (support != null && spirit >= support.spiritCost && actor.HpPercent < 0.75f) return support;
-                if (active != null && spirit >= active.spiritCost) return active;
+                if (support != null && actor.mp >= support.spiritCost && actor.HpPercent < 0.75f) return support;
+                if (active != null && actor.mp >= active.spiritCost) return active;
                 return basic;
             }
 
             // 火灵 / 风灵：奥义 ＞ 主动 ＞ 普攻
             if (ultReady) return ult;
-            if (active != null && spirit >= active.spiritCost) return active;
+            if (active != null && actor.mp >= active.spiritCost) return active;
             return basic;
         }
 
@@ -577,11 +674,11 @@ namespace LingJing.Battle
         {
             var ult = actor.def.Skill(SkillType.Ultimate);
             if (ult != null && ult.targetSide == TargetSide.AllEnemies && ult.multiplier > 0f
-                && actor.Cooldown(ult.id) <= 0 && spirit >= ult.spiritCost) return ult;
+                && actor.Cooldown(ult.id) <= 0 && actor.mp >= ult.spiritCost) return ult;
 
             var active = actor.def.Skill(SkillType.Active);
             if (active != null && active.targetSide == TargetSide.AllEnemies && active.multiplier > 0f
-                && actor.Cooldown(active.id) <= 0 && spirit >= active.spiritCost) return active;
+                && actor.Cooldown(active.id) <= 0 && actor.mp >= active.spiritCost) return active;
 
             return null;
         }
@@ -747,8 +844,8 @@ namespace LingJing.Battle
             if (ActionStarted != null) ActionStarted(actor, skill);
 
             // 灵能
-            if (skill.spiritCost < 0) spirit = Mathf.Min(spiritMax, spirit + 1);
-            else spirit = Mathf.Max(0, spirit - skill.spiritCost);
+            if (skill.spiritCost < 0) actor.mp = Mathf.Min(actor.mpMax, actor.mp + 1);
+            else actor.mp = Mathf.Max(0, actor.mp - skill.spiritCost);
 
             if (skill.cooldown > 0) actor.SetCooldown(skill.id, skill.cooldown);
             if (skill.taunt) actor.tauntRounds = Mathf.Max(1, skill.controlDuration);

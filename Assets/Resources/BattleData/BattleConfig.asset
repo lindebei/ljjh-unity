@@ -41,12 +41,14 @@ MonoBehaviour:
   dotDuration: 3
   spiritMax: 8
   spiritRegenEveryRounds: 3
-  tickSeconds: 0.5
+  tickSeconds: 0.2
   gaugeGainPerTick: 4
   gaugeThreshold: 100
   potionsPerBattle: 8
   potionHealPercent: 0.35
   potionTriggerHpPercent: 0.35
+  mpPotionsPerBattle: 3
+  mpPotionRestore: 4
   playerActionsPerRound: 3
   healTalentConstant: 250
   healSecondRatio: 0.5

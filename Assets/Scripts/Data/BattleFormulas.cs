@@ -124,6 +124,12 @@ namespace LingJing.Data
         }
 
         /// <summary>初始灵能 = 4 + floor((三兽精神均值 − 60) / 30)，上限 6。</summary>
+        /// <summary>每只兽自己的蓝条上限：按精神算，精神高的蓝多（四灵里水/风精神高，火/土偏少）。</summary>
+        public static int MpMax(float spr)
+        {
+            return Mathf.Clamp(4 + Mathf.RoundToInt((spr - 60f) / 20f), 4, 12);
+        }
+
         public static int SpiritStart(float meanSpr)
         {
             int v = 4 + (int)Math.Floor((meanSpr - 60f) / 30f);

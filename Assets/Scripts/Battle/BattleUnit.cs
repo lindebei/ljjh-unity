@@ -56,6 +56,8 @@ namespace LingJing.Battle
         public float shield;
 
         public float gauge;
+        public int mp;             // 自己的蓝（每只兽独立，上限按精神算）
+        public int mpMax;
         public int actionsTaken;
 
         // 增益（不进状态列表，直接算进有效属性）

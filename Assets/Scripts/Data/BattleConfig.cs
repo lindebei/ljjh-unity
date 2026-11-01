@@ -38,7 +38,7 @@ namespace LingJing.Data
         public int spiritRegenEveryRounds = 3;
 
         [Header("行动条")]
-        public float tickSeconds = 0.5f;
+        public float tickSeconds = 0.2f;      // 0.5 太拖（一拍 +4 点、100 点出手 = 12.5 秒一次行动），压到 0.2 后约 5 秒
         public float gaugeGainPerTick = 4f;
         public float gaugeThreshold = 100f;
 
@@ -46,6 +46,10 @@ namespace LingJing.Data
         public int potionsPerBattle = 8;
         public float potionHealPercent = 0.35f;
         public float potionTriggerHpPercent = 0.35f;
+
+    [Header("MP 药剂（蓝瓶）")]
+    public int mpPotionsPerBattle = 3;
+    public int mpPotionRestore = 4;
 
         [Header("回合（我方累计 3 次行动 = 1 回合）")]
         public int playerActionsPerRound = 3;

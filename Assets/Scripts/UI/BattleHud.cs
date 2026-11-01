@@ -38,8 +38,15 @@ namespace LingJing.UI
         readonly Dictionary<BattleUnit, RectTransform> hpFills = new Dictionary<BattleUnit, RectTransform>();
         readonly Dictionary<BattleUnit, Text> hpTexts = new Dictionary<BattleUnit, Text>();
         readonly Dictionary<BattleUnit, Text> powerTexts = new Dictionary<BattleUnit, Text>();
-        readonly Dictionary<BattleUnit, RectTransform> gaugeFills = new Dictionary<BattleUnit, RectTransform>();
-        readonly Dictionary<BattleUnit, GameObject> gaugeRows = new Dictionary<BattleUnit, GameObject>();   // 未入场的波次整行藏起来
+        readonly Dictionary<BattleUnit, Button> cardButtons = new Dictionary<BattleUnit, Button>();
+        readonly Dictionary<BattleUnit, RectTransform> gaugeMarkers = new Dictionary<BattleUnit, RectTransform>();
+        readonly Dictionary<BattleUnit, Image> gaugeMarkerBgs = new Dictionary<BattleUnit, Image>();
+        RectTransform gaugeTrack;
+        readonly Dictionary<BattleUnit, RectTransform> mpFills = new Dictionary<BattleUnit, RectTransform>();
+        readonly Dictionary<BattleUnit, Text> mpTexts = new Dictionary<BattleUnit, Text>();
+        Text mpPotionText;
+        Button mpPotionButton;
+        int pendingSlot = -1;              // >=0 表示正等玩家点一个敌人当目标
         readonly Dictionary<BattleUnit, Text> gaugeTexts = new Dictionary<BattleUnit, Text>();
         readonly Dictionary<BattleUnit, RectTransform> cardRects = new Dictionary<BattleUnit, RectTransform>();
         readonly Dictionary<BattleUnit, Image> cardImages = new Dictionary<BattleUnit, Image>();
@@ -48,7 +55,6 @@ namespace LingJing.UI
 
         Transform playerRow;
         Transform enemyRow;
-        Transform gaugeColumn;
         Transform logColumn;
         RectTransform canvasRect;
         Text spiritText;
@@ -181,27 +187,47 @@ namespace LingJing.UI
             glr.sizeDelta = new Vector2(1500f, 760f);
             glr.anchoredPosition = new Vector2(80f, 40f);
 
-            // 左：行动条面板（贴左边，宽 300）
-            var gaugePanel = MakePanel(canvasGo.transform, "GaugePanel", new Color(0.11f, 0.12f, 0.15f, 1f));
+            // 行动条：横向一条跑道（用户要求「都在一条直线上，谁跑得快就到谁攻击」）
+            var gaugePanel = MakePanel(canvasGo.transform, "GaugePanel", new Color(0.10f, 0.11f, 0.14f, 0.95f));
             var gp = gaugePanel.rectTransform;
-            gp.anchorMin = new Vector2(0f, 0f);
-            gp.anchorMax = new Vector2(0f, 1f);
-            gp.pivot = new Vector2(0f, 0.5f);
-            gp.offsetMin = new Vector2(0f, 0f);
-            gp.offsetMax = new Vector2(300f, 0f);
+            gp.anchorMin = new Vector2(0f, 1f);
+            gp.anchorMax = new Vector2(1f, 1f);
+            gp.pivot = new Vector2(0.5f, 1f);
+            gp.anchoredPosition = new Vector2(0f, -40f);
+            gp.sizeDelta = new Vector2(-700f, 46f);   // 顶栏正下方一条窄带，敌方卡从 y=100 开始
 
-            MakeText(gaugePanel.transform, "GaugeTitle", "行动条  0.5s/拍", 20, new Color(0.75f, 0.8f, 0.9f),
-                TextAnchor.MiddleLeft, new Vector2(0f, 1f), new Vector2(280f, 28f), new Vector2(0f, 1f), new Vector2(16f, -14f));
-            gaugeColumn = MakeColumn(gaugePanel.transform, "GaugeList", 10f, new RectOffset(14, 14, 52, 14), false);
+            MakeText(gaugePanel.transform, "GaugeTitle", "行动条", 16, new Color(0.75f, 0.8f, 0.9f),
+                TextAnchor.MiddleLeft, new Vector2(0f, 0.5f), new Vector2(90f, 20f), new Vector2(0f, 0.5f), new Vector2(-96f, 0f));
+
+            // 跑道：一条从左到右的细线，右端是「出手线」
+            var track = MakePanel(gaugePanel.transform, "Track", new Color(0.34f, 0.38f, 0.47f, 1f));
+            gaugeTrack = track.rectTransform;
+            gaugeTrack.anchorMin = new Vector2(0f, 0.5f);
+            gaugeTrack.anchorMax = new Vector2(1f, 0.5f);
+            gaugeTrack.pivot = new Vector2(0.5f, 0.5f);
+            gaugeTrack.anchoredPosition = new Vector2(0f, 2f);
+            gaugeTrack.sizeDelta = new Vector2(-130f, 8f);
+
+            var finish = MakePanel(gaugePanel.transform, "Finish", new Color(1f, 0.85f, 0.45f, 0.9f));
+            var fr = finish.rectTransform;
+            fr.anchorMin = new Vector2(1f, 0.5f);
+            fr.anchorMax = new Vector2(1f, 0.5f);
+            fr.pivot = new Vector2(1f, 0.5f);
+            fr.sizeDelta = new Vector2(5f, 46f);
+            fr.anchoredPosition = new Vector2(-27f, 4f);
+            MakeText(finish.transform, "FinishLabel", "出手", 14, new Color(1f, 0.85f, 0.45f), TextAnchor.MiddleRight,
+                new Vector2(1f, 1f), new Vector2(60f, 20f), new Vector2(1f, 1f), new Vector2(0f, 22f));
 
             // 上：敌方（怪物在上，贴顶部）；下：我方（自己的兽在底部，紧贴技能栏）
-            enemyRow = MakeRow(canvasGo.transform, "Enemies", new Vector2(340f, 100f), new Vector2(1500f, 200f));
+            enemyRow = MakeRow(canvasGo.transform, "Enemies", new Vector2(340f, 112f), new Vector2(1500f, 200f));
             playerRow = MakeRow(canvasGo.transform, "Players", new Vector2(340f, 660f), new Vector2(1500f, 200f));
 
-            spiritText = MakeText(canvasGo.transform, "Spirit", "灵能 4/8", 30, new Color(0.5f, 0.85f, 1f), TextAnchor.MiddleLeft,
-                new Vector2(0f, 1f), new Vector2(420f, 40f), new Vector2(0f, 1f), new Vector2(350f, -60f));
-            potionText = MakeText(canvasGo.transform, "Potion", "药品 8", 26, new Color(0.85f, 0.9f, 0.7f), TextAnchor.MiddleLeft,
-                new Vector2(0f, 1f), new Vector2(260f, 40f), new Vector2(0f, 1f), new Vector2(800f, -60f));
+            // MP 改成每只兽一张蓝条（画在卡片里，见 BuildUnitWidgets）——用户明确不要统一 MP
+            // 回合数与药品数：顶栏一排（MP 已经改成每只兽卡片里的蓝条，这里不再放全局蓝条）
+            spiritText = MakeText(canvasGo.transform, "Round", "回合 1/30", 22, new Color(0.8f, 0.88f, 1f), TextAnchor.MiddleLeft,
+                new Vector2(0f, 1f), new Vector2(300f, 30f), new Vector2(0f, 1f), new Vector2(352f, -6f));
+            potionText = MakeText(canvasGo.transform, "Potion", "药品 8", 22, new Color(0.85f, 0.9f, 0.7f), TextAnchor.MiddleLeft,
+                new Vector2(0f, 1f), new Vector2(260f, 30f), new Vector2(0f, 1f), new Vector2(676f, -6f));
 
             // 横幅放在「我方行」与「敌方行」之间的空档里（320–690 那条带），别压到血条卡片上
             statusBanner = MakeText(canvasGo.transform, "Banner", "", 34, new Color(1f, 0.9f, 0.5f), TextAnchor.MiddleCenter,
@@ -219,14 +245,19 @@ namespace LingJing.UI
             for (int i = 0; i < 4; i++)
             {
                 int idx = i;
-                var btn = MakeButton(bar.transform, "Skill" + i, "", new Vector2(-570f + i * 290f, 0f), new Vector2(270f, 130f));
+                var btn = MakeButton(bar.transform, "Skill" + i, "", new Vector2(-580f + i * 262f, 0f), new Vector2(248f, 126f));
                 btn.onClick.AddListener(() => OnSkillClicked(idx));
                 skillButtons[i] = btn;
                 skillLabels[i] = btn.GetComponentInChildren<Text>();
                 skillIcons[i] = AddButtonIcon(btn, 66f, 12f);
                 IndentLabel(skillLabels[i], 84f);
             }
-            potionButton = MakeButton(bar.transform, "PotionBtn", "药品\n(35% 血)", new Vector2(660f, 0f), new Vector2(180f, 130f));
+            mpPotionButton = MakeButton(bar.transform, "MpPotionBtn", "魔药\n+4 MP", new Vector2(646f, 0f), new Vector2(150f, 120f));
+            mpPotionButton.onClick.AddListener(OnMpPotionClicked);
+            mpPotionText = mpPotionButton.GetComponentInChildren<Text>();
+            mpPotionButton.image.color = new Color(0.20f, 0.26f, 0.40f, 1f);
+
+            potionButton = MakeButton(bar.transform, "PotionBtn", "药品\n35% 血", new Vector2(486f, 0f), new Vector2(150f, 120f));
             potionButton.onClick.AddListener(OnPotionClicked);
             potionIcon = AddButtonIcon(potionButton, 52f, 10f);
             potionIcon.sprite = LoadIcon("potion");
@@ -236,10 +267,10 @@ namespace LingJing.UI
             // 自动战斗：设计文档要求「等级 ≥15 才解锁」，低于 15 级置灰并写明原因
             autoButton = MakeButton(canvasGo.transform, "AutoBtn", "", new Vector2(0f, 0f), new Vector2(240f, 56f));
             var abrt = autoButton.GetComponent<RectTransform>();
-            abrt.anchorMin = new Vector2(0f, 1f);      // 顶栏左侧区（灵能、药品右边），别压到右边的日志面板
-            abrt.anchorMax = new Vector2(0f, 1f);
-            abrt.pivot = new Vector2(0f, 1f);
-            abrt.anchoredPosition = new Vector2(1090f, -46f);
+            abrt.anchorMin = new Vector2(1f, 1f);      // 右上角：日志面板左边、行动条右边
+            abrt.anchorMax = new Vector2(1f, 1f);
+            abrt.pivot = new Vector2(1f, 1f);
+            abrt.anchoredPosition = new Vector2(-344f, -6f);
             autoButton.onClick.AddListener(OnAutoClicked);
             UpdateAutoButton();
 
@@ -545,7 +576,7 @@ namespace LingJing.UI
 
                 // 我方固定 3 只，永远用满宽卡片
                 float cw = isPlayer ? 460f : cardW;
-                float ch = isPlayer ? 190f : cardH;
+                float ch = isPlayer ? 205f : cardH;
                 float pw = isPlayer ? 150f : pcW;
                 float tw = isPlayer ? 278f : textW0;
 
@@ -558,6 +589,13 @@ namespace LingJing.UI
                 var le = card.gameObject.AddComponent<LayoutElement>();
                 le.preferredWidth = cw;
                 le.preferredHeight = ch;
+
+                // 敌方卡片做成按钮：单体技能点完之后点它决定打谁（自己的兽不能当目标）
+                cardButtons[u] = card.gameObject.AddComponent<Button>();
+                cardButtons[u].targetGraphic = card;
+                cardButtons[u].transition = Selectable.Transition.None;
+                var captured = u;
+                cardButtons[u].onClick.AddListener(() => OnTargetClicked(captured));
 
                 // 立绘：卡片左侧 150x150，等比缩放（没有图就只留空白，不影响其它布局）
                 // Boss 想要「看起来更压场」但不换美术：立绘放大 12% + 背后加一圈品质色光晕。
@@ -591,7 +629,7 @@ namespace LingJing.UI
                 portraits[u] = portrait;
 
                 // 名字 + 血条排在立绘右边
-                var col = MakeColumn(card.transform, "Col", 8f, new RectOffset((int)pw + 20, 12, 16, 10), false);
+                var col = MakeColumn(card.transform, "Col", 4f, new RectOffset((int)pw + 20, 12, 12, 8), false);
 
                 // —— 品质区分（用户 03:40 提的：精英和 Boss 不能跟普通怪长得一样）——
                 // 手段只有三样，都便宜且不影响布局：卡片底色、名字颜色、左下角一条竖色带 + 右下角角标。
@@ -643,36 +681,52 @@ namespace LingJing.UI
                 hpTexts[u] = MakeText(hpBar.Item1, "HpText", "", 17, Color.white, TextAnchor.MiddleCenter,
                     new Vector2(0f, 0f), new Vector2(tw, 26f), new Vector2(0f, 0f), Vector2.zero);
                 Stretch(hpTexts[u].rectTransform);
+                hpTexts[u].transform.SetAsLastSibling();
 
                 // 战力：只显示不参与结算。放在名字/血条同一个竖列里最省事——
                 // 之前挂在卡片左下角，Text 建出来了、文本也写进去了，但就是画不出来
                 // （卡片自身 Image 与列布局的层级关系），挪进 col 立刻可见。
-                powerTexts[u] = MakeText(col, "Power", "战力 -", 18, new Color(0.72f, 0.80f, 0.90f),
+                if (isPlayer)
+                {
+                    var mpBar = MakeBar(col, "Mp", new Color(0.36f, 0.68f, 1f), tw, 17f);
+                    mpFills[u] = mpBar.Item2;
+                    mpTexts[u] = MakeText(mpBar.Item1, "MpText", "", 14, Color.white, TextAnchor.MiddleCenter,
+                        new Vector2(0f, 0f), new Vector2(tw, 17f), new Vector2(0f, 0f), Vector2.zero);
+                    Stretch(mpTexts[u].rectTransform);
+                    mpTexts[u].transform.SetAsLastSibling();
+                    var mpo = mpTexts[u].gameObject.AddComponent<Outline>();
+                    mpo.effectColor = new Color(0f, 0.10f, 0.25f, 0.95f);
+                    mpo.effectDistance = new Vector2(1.5f, -1.5f);
+                }
+
+                powerTexts[u] = MakeText(col, "Power", "战力 -", 16, new Color(0.72f, 0.80f, 0.90f),
                     TextAnchor.MiddleLeft, new Vector2(0f, 1f), new Vector2(tw, 24f),
                     new Vector2(0f, 1f), Vector2.zero);
 
-                // 行动条（左侧竖排）
-                var gRow = MakePanel(gaugeColumn, "GRow_" + u.id, new Color(0.13f, 0.15f, 0.19f, 1f));
-                gRow.rectTransform.sizeDelta = new Vector2(272f, 58f);
-                var gle = gRow.gameObject.AddComponent<LayoutElement>();
-                gle.preferredHeight = 58f;
-                gle.preferredWidth = 272f;
+                // 行动条徽标：我方蓝、敌方红；带小立绘 + 名字首字，跑道上按进度往右挪
+                var markBg = MakePanel(gaugeTrack, "Mark_" + u.id,
+                    isPlayer ? new Color(0.22f, 0.40f, 0.62f, 1f) : new Color(0.52f, 0.24f, 0.22f, 1f));
+                var mr = markBg.rectTransform;
+                mr.anchorMin = new Vector2(0f, 0.5f);
+                mr.anchorMax = new Vector2(0f, 0.5f);
+                mr.pivot = new Vector2(0.5f, 0.5f);
+                mr.sizeDelta = new Vector2(38f, 38f);
+                mr.anchoredPosition = new Vector2(0f, 6f);
+                gaugeMarkers[u] = mr;
+                gaugeMarkerBgs[u] = markBg;
 
-                MakeText(gRow.transform, "GName", u.displayName + "  " + (isPlayer ? "我" : "敌"), 17,
-                    isPlayer ? new Color(0.6f, 0.9f, 1f) : QualityNameColor(u.quality), TextAnchor.MiddleLeft,
-                    new Vector2(0f, 1f), new Vector2(200f, 22f), new Vector2(0f, 1f), new Vector2(8f, -4f));
+                var mIcon = new GameObject("MIcon", typeof(Image)).GetComponent<Image>();
+                mIcon.transform.SetParent(mr, false);
+                mIcon.sprite = LoadPortrait(u.id);
+                mIcon.preserveAspect = true;
+                mIcon.raycastTarget = false;
+                mIcon.enabled = mIcon.sprite != null;
+                Stretch(mIcon.rectTransform);
+                mIcon.rectTransform.offsetMin = new Vector2(3f, 3f);
+                mIcon.rectTransform.offsetMax = new Vector2(-3f, -3f);
 
-                gaugeTexts[u] = MakeText(gRow.transform, "GVal", "", 16, Color.white, TextAnchor.MiddleRight,
-                    new Vector2(1f, 1f), new Vector2(80f, 22f), new Vector2(1f, 1f), new Vector2(-8f, -4f));
-
-                var gBar = MakeBar(gRow.transform, "Gauge", isPlayer ? new Color(0.35f, 0.75f, 1f) : new Color(1f, 0.55f, 0.35f), 256f, 16f);
-                gaugeFills[u] = gBar.Item2;
-                gaugeRows[u] = gRow.gameObject;
-                var grt = gBar.Item1;
-                grt.anchorMin = new Vector2(0f, 0f);
-                grt.anchorMax = new Vector2(0f, 0f);
-                grt.pivot = new Vector2(0f, 0f);
-                grt.anchoredPosition = new Vector2(8f, 8f);
+                gaugeTexts[u] = MakeText(mr, "GVal", "", 11, Color.white, TextAnchor.MiddleCenter,
+                    new Vector2(0.5f, 0f), new Vector2(34f, 14f), new Vector2(0.5f, 0f), new Vector2(0f, -13f));
             }
         }
 
@@ -681,6 +735,15 @@ namespace LingJing.UI
         void Update()
         {
             if (sim == null || !battleStarted) return;
+
+            // 选目标时可以按 Esc 放弃，回到技能选择
+            if (pendingSlot >= 0 && Input.GetKeyDown(KeyCode.Escape))
+            {
+                pendingSlot = -1;
+                MarkTargetable(false);
+                statusBanner.text = "轮到 " + (sim.awaitingPlayer != null ? sim.awaitingPlayer.displayName : "") + " —— 选一个技能";
+                statusBanner.color = new Color(1f, 0.9f, 0.5f);
+            }
 
             if (sim.IsBattleOver)
             {
@@ -804,14 +867,66 @@ namespace LingJing.UI
 
         // ------------------------------------------------------------------ 交互
 
+        void OnMpPotionClicked()
+        {
+            if (sim.awaitingPlayer == null) return;
+            if (sim.mpPotions <= 0) { Flash("没有魔药了"); return; }
+            sim.ResolvePlayerMpPotion();
+            ClearButtons();
+            RefreshAll();
+        }
+
+        /// <summary>点敌方卡片：正在等目标就按这张卡结算，否则不做事。</summary>
+        void OnTargetClicked(BattleUnit target)
+        {
+            if (pendingSlot < 0) return;
+            var actor = sim.awaitingPlayer;
+            if (actor == null) { pendingSlot = -1; return; }
+            if (target == null || !target.IsAlive || target.side != Side.Enemy) return;
+
+            var skill = actor.def.Skill((SkillType)pendingSlot);
+            pendingSlot = -1;
+            MarkTargetable(false);
+            if (skill == null) return;
+            sim.ResolvePlayerTurn(skill, target);
+            ClearButtons();
+            RefreshAll();
+        }
+
+        /// <summary>把敌方卡片标成「可点」：加一圈暖色描边，并放大一点点。</summary>
+        void MarkTargetable(bool on)
+        {
+            for (int i = 0; i < sim.units.Count; i++)
+            {
+                var u = sim.units[i];
+                if (u.side != Side.Enemy || !cardImages.ContainsKey(u)) continue;
+                if (!u.IsAlive || !u.inField) continue;
+                cardImages[u].color = on
+                    ? Color.Lerp(cardBaseColors[u], new Color(1f, 0.85f, 0.45f), 0.35f)
+                    : (u.quality == Quality.Normal ? cardBaseColors[u] : QualityCardTint(u.quality));
+                cardRects[u].localScale = on ? new Vector3(1.03f, 1.03f, 1f) : Vector3.one;
+            }
+        }
+
         void OnSkillClicked(int slot)
         {
             var actor = sim.awaitingPlayer;
             if (actor == null) return;
             var skill = actor.def.Skill((SkillType)slot);
             if (skill == null) { Flash("这个槽位是空的"); return; }
-            if (skill.spiritCost > 0 && sim.spirit < skill.spiritCost) { Flash("灵能不够"); return; }
-            if (actor.Cooldown(skill.id) > 0) { Flash("技能冷却中"); return; }
+            if (skill.spiritCost > 0 && actor.mp < skill.spiritCost) { Flash("这只兽的 MP 不够"); return; }
+            if (actor.Cooldown(skill.id) > 0) { Flash(string.Format("冷却中（还要 {0} 次行动）", actor.Cooldown(skill.id))); return; }
+
+            // 单体攻击/单奶要玩家自己点目标；群体技能直接结算
+            bool needsTarget = skill.targetSide == TargetSide.Enemy && skill.multiplier > 0;
+            if (needsTarget)
+            {
+                pendingSlot = slot;
+                MarkTargetable(true);
+                statusBanner.text = "点一个敌人作为目标（Esc 取消）";
+                statusBanner.color = new Color(1f, 0.85f, 0.45f);
+                return;
+            }
 
             sim.ResolvePlayerTurn(skill);
             ClearButtons();
@@ -836,13 +951,16 @@ namespace LingJing.UI
                 var skill = actor.def.Skill((SkillType)i);
                 bool hasSkill = skill != null;
                 bool usable = hasSkill
-                              && (skill.spiritCost <= 0 || sim.spirit >= skill.spiritCost)
+                              && (skill.spiritCost <= 0 || actor.mp >= skill.spiritCost)
                               && actor.Cooldown(skill.id) <= 0;
 
                 skillButtons[i].interactable = usable;
                 string cost = !hasSkill ? "-" : (skill.spiritCost < 0 ? "+1" : skill.spiritCost.ToString());
+                string shape = !hasSkill ? "" : TargetShape(skill);
+                string cd = (hasSkill && actor.Cooldown(skill.id) > 0)
+                    ? string.Format("  冷却{0}", actor.Cooldown(skill.id)) : "";
                 skillLabels[i].text = !hasSkill ? "—"
-                    : string.Format("{0}\n<{1}> 灵能{2}", skill.displayName, SlotName(i), cost);
+                    : string.Format("{0}\n<{1}{2}> MP{3}{4}", skill.displayName, SlotName(i), shape, cost, cd);
                 skillLabels[i].color = usable ? Color.white : new Color(0.45f, 0.45f, 0.45f);
                 if (skillIcons[i] != null)
                 {
@@ -852,6 +970,7 @@ namespace LingJing.UI
                 }
             }
             potionButton.interactable = sim.potions > 0;
+            if (mpPotionButton != null) mpPotionButton.interactable = sim.mpPotions > 0 && actor.mp < actor.mpMax;
         }
 
         void ClearButtons()
@@ -863,7 +982,20 @@ namespace LingJing.UI
                 skillLabels[i].color = new Color(0.45f, 0.45f, 0.45f);
             }
             potionButton.interactable = false;
+            if (mpPotionButton != null) mpPotionButton.interactable = false;
+            if (pendingSlot >= 0) { pendingSlot = -1; MarkTargetable(false); }
             statusBanner.text = "";
+        }
+
+        /// <summary>单体 / 全体 / 治疗 / 增益 —— 直接写在按钮上，免得玩家点了才发现打不到。</summary>
+        static string TargetShape(SkillDefinition skill)
+        {
+            if (skill.isHeal) return "·治疗";
+            if (skill.isShield) return "·护盾";
+            if (skill.buffPercent > 0f) return "·增益";
+            if (skill.targetSide == TargetSide.AllEnemies && (skill.multiplier > 0f || skill.dotStacks > 0)) return "·全体";
+            if (skill.targetSide == TargetSide.Enemy && skill.multiplier > 0f) return "·单体";
+            return "";
         }
 
         static string SlotName(int i)
@@ -892,10 +1024,21 @@ namespace LingJing.UI
                     hpTexts[u].text = string.Format("{0:F0}/{1:F0}{2}", u.hp, u.maxHp,
                         u.shield > 0.5f ? "   盾 " + u.shield.ToString("F0") : "");
                 }
-                if (gaugeFills.ContainsKey(u))
+                if (gaugeMarkers.ContainsKey(u))
                 {
-                    gaugeFills[u].anchorMax = new Vector2(Mathf.Clamp01(u.gauge / sim.config.gaugeThreshold), 1f);
-                    gaugeTexts[u].text = u.IsAlive ? u.gauge.ToString("F0") : "倒下";
+                    // 跑道宽度 = 父节点宽度，按行动值比例摆；同分时我方略高一档，避免完全重叠
+                    float t = Mathf.Clamp01(u.gauge / Mathf.Max(1f, sim.config.gaugeThreshold));
+                    var parentW = gaugeTrack.rect.width;
+                    float x = Mathf.Lerp(19f, parentW - 19f, t);
+                    // 两车道交错：行动值接近时两个徽标不会完全叠在一起
+                    float lane = (i % 2 == 0) ? 10f : -10f;
+                    gaugeMarkers[u].anchoredPosition = new Vector2(x, 4f + lane);
+                    bool acting = sim.awaitingPlayer == u;
+                    gaugeMarkerBgs[u].color = acting ? new Color(1f, 0.85f, 0.45f, 1f)
+                        : (u.side == Side.Player ? new Color(0.22f, 0.40f, 0.62f, 1f) : new Color(0.52f, 0.24f, 0.22f, 1f));
+                    gaugeTexts[u].text = u.IsAlive ? u.gauge.ToString("F0") : "倒";
+                    gaugeTexts[u].color = acting ? new Color(1f, 0.85f, 0.45f) : Color.white;
+                    gaugeMarkers[u].localScale = acting ? new Vector3(1.15f, 1.15f, 1f) : Vector3.one;
                 }
                 if (portraits.ContainsKey(u) && portraits[u] != null)
                 {
@@ -914,17 +1057,28 @@ namespace LingJing.UI
                 if (cardRects.ContainsKey(u) && cardRects[u].gameObject.activeSelf != showCard)
                     cardRects[u].gameObject.SetActive(showCard);
 
-                // 行动条行：只要没入场就整行不显示（后面的波次别提前占着左边一列）
-                if (gaugeRows.ContainsKey(u) && gaugeRows[u].activeSelf != u.inField)
-                    gaugeRows[u].SetActive(u.inField);
+                // 行动条徽标：没入场的波次不显示
+                if (gaugeMarkers.ContainsKey(u) && gaugeMarkers[u].gameObject.activeSelf != (u.inField && u.IsAlive))
+                    gaugeMarkers[u].gameObject.SetActive(u.inField && u.IsAlive);
             }
 
+            for (int i = 0; i < sim.units.Count; i++)
+            {
+                var u = sim.units[i];
+                if (mpFills.ContainsKey(u))
+                {
+                    mpFills[u].anchorMax = new Vector2(Mathf.Clamp01(u.mp / (float)Mathf.Max(1, u.mpMax)), 1f);
+                    mpTexts[u].text = string.Format("MP {0}/{1}", u.mp, u.mpMax);
+                }
+            }
+            if (mpPotionText != null) mpPotionText.text = string.Format("魔药 {0}\n+4 MP", sim.mpPotions);
+
             spiritText.text = sim.WaveTotal > 1
-                ? string.Format("灵能 {0}/{1}     回合 {2}/{3}     第 {4}/{5} 波",
-                    sim.spirit, sim.config.spiritMax, Mathf.Min(sim.round, sim.config.maxRounds), sim.config.maxRounds,
+                ? string.Format("回合 {0}/{1}     第 {2}/{3} 波",
+                    Mathf.Min(sim.round, sim.config.maxRounds), sim.config.maxRounds,
                     sim.currentWave + 1, sim.WaveTotal)
-                : string.Format("灵能 {0}/{1}     回合 {2}/{3}",
-                    sim.spirit, sim.config.spiritMax, Mathf.Min(sim.round, sim.config.maxRounds), sim.config.maxRounds);
+                : string.Format("回合 {0}/{1}",
+                    Mathf.Min(sim.round, sim.config.maxRounds), sim.config.maxRounds);
             potionText.text = string.Format("药品 {0}", sim.potions);
 
             RefreshLog();
@@ -936,15 +1090,15 @@ namespace LingJing.UI
             if (sim == null) return "sim=null";
 
             var sb = new System.Text.StringBuilder();
-            sb.AppendFormat("frame={0} t={1:F1}s round={2} spirit={3}/{4} potions={5} awaiting={6} over={7}",
-                Time.frameCount, sim.time, sim.round, sim.spirit, sim.config.spiritMax, sim.potions,
+            sb.AppendFormat("frame={0} t={1:F1}s round={2} mpPotions={3} potions={4} awaiting={5} over={6}",
+                Time.frameCount, sim.time, sim.round, sim.mpPotions, sim.potions,
                 sim.awaitingPlayer != null ? sim.awaitingPlayer.displayName : "-", sim.IsBattleOver);
 
             for (int i = 0; i < sim.units.Count; i++)
             {
                 var u = sim.units[i];
                 float gaugeRatio = Mathf.Clamp01(u.gauge / sim.config.gaugeThreshold);
-                float drawnRatio = gaugeFills.ContainsKey(u) ? gaugeFills[u].anchorMax.x : -1f;
+                float drawnRatio = gaugeMarkers.ContainsKey(u) ? gaugeMarkers[u].anchoredPosition.x : -1f;
                 sb.AppendFormat(" | {0}: hp={1:F0}/{2:F0} gauge={3:F0} ratio={4:F2} drawn={5:F2}",
                     u.displayName, u.hp, u.maxHp, u.gauge, gaugeRatio, drawnRatio);
             }

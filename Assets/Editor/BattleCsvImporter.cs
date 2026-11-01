@@ -261,6 +261,8 @@ public static class BattleCsvImporter
         cfg.potionsPerBattle = GetInt(map, "potionsPerBattle", cfg.potionsPerBattle);
         cfg.potionHealPercent = GetFloat(map, "potionHealPercent", cfg.potionHealPercent);
         cfg.potionTriggerHpPercent = GetFloat(map, "potionTriggerHpPercent", cfg.potionTriggerHpPercent);
+        cfg.mpPotionsPerBattle = GetInt(map, "mpPotionsPerBattle", cfg.mpPotionsPerBattle);
+        cfg.mpPotionRestore = GetInt(map, "mpPotionRestore", cfg.mpPotionRestore);
         cfg.playerActionsPerRound = GetInt(map, "playerActionsPerRound", cfg.playerActionsPerRound);
         cfg.healTalentConstant = GetFloat(map, "healTalentConstant", cfg.healTalentConstant);
         cfg.healSecondRatio = GetFloat(map, "healSecondRatio", cfg.healSecondRatio);
