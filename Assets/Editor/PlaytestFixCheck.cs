@@ -53,6 +53,30 @@ public static class PlaytestFixCheck
         log.AppendLine(string.Format("③ 护盾值：土灵 shield={0:0} （最大生命 {1:0}）  {2}",
             sim2.units[0].shield, sim2.units[0].maxHp, sim2.units[0].shield > 1f ? "PASS" : "FAIL"));
 
+        // ---- ④ 辅助技能按效果分「己方 / 敌方」----
+        var debuff = ScriptableObject.CreateInstance<SkillDefinition>();
+        debuff.id = "test_debuff"; debuff.displayName = "测试压制";
+        debuff.type = SkillType.Support;
+        debuff.targetSide = TargetSide.Ally;              // 数据故意写错：说是给友方
+        debuff.appliedStatus = StatusType.HealDown;       // 实际是给敌人挂「减疗」
+        debuff.dotStacks = 1; debuff.multiplier = 0f;
+        debuff.spiritCost = 1; debuff.cooldown = 0;
+        var effSide = SkillTargeting.EffectiveSide(debuff);
+        bool isHostile = SkillTargeting.IsHostileEffect(debuff);
+        bool isFriendly = SkillTargeting.IsFriendlyEffect(debuff);
+        log.AppendLine(string.Format("④ 辅助判定：写的是 {0}，实际效果 敌对={1}/友方={2} → 运行时按 {3}  {4}",
+            debuff.targetSide, isHostile, isFriendly, effSide,
+            (effSide == TargetSide.Enemy && isHostile && !isFriendly) ? "PASS" : "FAIL"));
+
+        var buff2 = BattleDatabase.GetSkill("f_support");
+        log.AppendLine(string.Format("⑤ 灼心（攻击 buff）→ 按 {0}  {1}",
+            SkillTargeting.EffectiveSide(buff2),
+            SkillTargeting.EffectiveSide(buff2) == TargetSide.Ally ? "PASS" : "FAIL"));
+        var shield2 = BattleDatabase.GetSkill("e_support");
+        log.AppendLine(string.Format("⑥ 磐石（自盾+嘲讽）→ 按 {0}  {1}",
+            SkillTargeting.EffectiveSide(shield2),
+            SkillTargeting.EffectiveSide(shield2) == TargetSide.Self ? "PASS" : "FAIL"));
+        Object.DestroyImmediate(debuff);
         Object.DestroyImmediate(cfg);
         System.IO.File.WriteAllText("D:/ljjh/tmp/playtest_fix.txt", log.ToString());
         Debug.Log(log.ToString());

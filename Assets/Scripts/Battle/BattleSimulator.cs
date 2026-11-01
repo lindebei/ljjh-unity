@@ -347,9 +347,10 @@ namespace LingJing.Battle
 
             // 只有「单体」技能才使用玩家点的目标；群体技能一律按技能自己的目标范围算，
             // 否则全体技能会因为带着一个点击目标而只打一只（用户在试玩里踩到过）。
-            bool singleTargetSide = skill.targetSide == TargetSide.Enemy
-                                    || skill.targetSide == TargetSide.Ally
-                                    || skill.targetSide == TargetSide.Self;
+            var eff = SkillTargeting.EffectiveSide(skill);
+            bool singleTargetSide = eff == TargetSide.Enemy
+                                    || eff == TargetSide.Ally
+                                    || eff == TargetSide.Self;
             List<BattleUnit> targets;
             if (singleTargetSide && chosenTarget != null && chosenTarget.IsAlive && chosenTarget.inField)
                 targets = new List<BattleUnit> { chosenTarget };
@@ -707,7 +708,7 @@ namespace LingJing.Battle
             var list = new List<BattleUnit>();
             if (skill == null) return list;
 
-            switch (skill.targetSide)
+            switch (SkillTargeting.EffectiveSide(skill))
             {
                 case TargetSide.Enemy:
                 {
@@ -881,7 +882,8 @@ namespace LingJing.Battle
             // 治疗（两段式）
             if (skill.isHeal)
             {
-                var healTargets = skill.healAllAllies ? Alive(Side.Player) : targets;
+                bool healAll = skill.healAllAllies || SkillTargeting.EffectiveSide(skill) == TargetSide.AllAllies;
+                var healTargets = healAll ? Alive(Side.Player) : targets;
                 // 系数按「每个目标」单独算：减疗（HealDown）是挂在被治疗者身上的
                 for (int i = 0; i < healTargets.Count; i++)
                 {
@@ -916,7 +918,7 @@ namespace LingJing.Battle
             // 增益
             if (skill.buffPercent > 0f)
             {
-                var buffTargets = skill.targetSide == TargetSide.AllAllies ? Alive(Side.Player) : targets;
+                var buffTargets = SkillTargeting.EffectiveSide(skill) == TargetSide.AllAllies ? Alive(Side.Player) : targets;
                 for (int i = 0; i < buffTargets.Count; i++)
                 {
                     var t = buffTargets[i];
@@ -928,12 +930,12 @@ namespace LingJing.Battle
             // 伤害
             if (skill.multiplier > 0f)
             {
-                var enemies = skill.targetSide == TargetSide.AllEnemies ? Alive(Side.Enemy) : targets;
+                var enemies = SkillTargeting.EffectiveSide(skill) == TargetSide.AllEnemies ? Alive(Side.Enemy) : targets;
                 if (enemies.Count > 0)
                 {
                     // 全体技能额外吃一个「清场效率」系数（config.aoeDamageScale）：
                     // 20→30 回合上限那轮发现波次战打不完，靠这个旋钮提效率，不去改设计文档里的技能倍率
-                    float scale = skill.targetSide == TargetSide.AllEnemies ? config.aoeDamageScale : 1f;
+                    float scale = SkillTargeting.EffectiveSide(skill) == TargetSide.AllEnemies ? config.aoeDamageScale : 1f;
                     if (scale != 1f) { aoeCastCount++; lastAoeScale = scale; }
 
                     float mul = skill.multiplier * scale * LingJing.Data.SkillRanks.MultiplierMul(skill);

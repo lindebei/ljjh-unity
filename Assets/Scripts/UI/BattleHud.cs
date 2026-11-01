@@ -980,8 +980,9 @@ namespace LingJing.UI
             if (actor.Cooldown(skill.id) > 0) { Flash(string.Format("冷却中（还要 {0} 次行动）", actor.Cooldown(skill.id))); return; }
 
             // 单体技能要玩家自己点目标（攻击点敌人、辅助/治疗点自己人）；群体技能直接结算
-            bool needEnemy = skill.targetSide == TargetSide.Enemy && skill.multiplier > 0;
-            bool needAlly = skill.targetSide == TargetSide.Ally;
+            // 辅助分两种：给己方加 buff、给敌人挂 debuff —— 由 SkillTargeting 按效果语义判定
+            bool needAlly = SkillTargeting.PickAlly(skill);
+            bool needEnemy = SkillTargeting.NeedsPick(skill) && !needAlly;
             if (needEnemy || needAlly)
             {
                 pendingSlot = slot;

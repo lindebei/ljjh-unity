@@ -149,6 +149,13 @@ public static class BattleCsvImporter
             so.buffPercent = GetFloat(r, "buffPct");
             so.buffDuration = GetInt(r, "buffDur");
             so.buffIsAttack = GetBool(r, "buffAtk");
+
+            // 校验「辅助技能打谁」：数据里的 target 和效果语义不一致就报警（运行时以效果为准）
+            var eff = LingJing.Battle.SkillTargeting.EffectiveSide(so);
+            if (eff != so.targetSide)
+                Debug.LogWarning(string.Format("[BattleCsvImporter] 技能 {0}（{1}）target={2} 与效果不符，运行时按 {3} 处理",
+                    so.id, so.displayName, so.targetSide, eff));
+
             EditorUtility.SetDirty(so);
 
             map[id] = so;
