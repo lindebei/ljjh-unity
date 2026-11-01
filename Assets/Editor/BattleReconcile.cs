@@ -129,6 +129,7 @@ public static class BattleReconcile
         public int playerLevel;       // 我方等级（真实一境是同级推进，只有同级的胜率才有意义）
         public int[] freePoints;      // 按 playerLevel 给：每级 6 点，六项均分
         public bool geared;           // 是否穿满配紫装（5 件 + 强化 3）
+        public int rank;              // 技能等级：0=用存档，1/2/3=强制 I/II/III
 
         public Scenario(string name, string[][] waves, int enemyLevel, int playerLevel)
         {
@@ -139,6 +140,7 @@ public static class BattleReconcile
             int per = (playerLevel - 1) * 6 / 6;      // 每级 6 点自由点，均分到六项
             this.freePoints = new[] { per, per, per, per, per, per };
             this.geared = false;
+            this.rank = 0;
         }
 
         public Scenario(string name, string[][] waves, int enemyLevel, int playerLevel, bool geared)
@@ -342,15 +344,58 @@ public static class BattleReconcile
         return results;
     }
 
+    /// <summary>技能等级 × 装备 的二维扫描：看「升级」到底把胜率推了多少。</summary>
+    [MenuItem("灵境/技能等级与装备扫描")]
+    public static void SweepRanks()
+    {
+        var cfg = BattleDatabase.Config;
+        if (cfg == null) { Debug.LogError("[RankSweep] BattleConfig 缺失"); return; }
+
+        var scs = new List<Scenario>
+        {
+            new Scenario("同级 普通x3 · lv10", W(new[] { "en_bonefish", "en_stonelizard", "en_rat" }), 10, 10),
+            new Scenario("同级 精英x2 · lv11", W(new[] { "en_bird", "en_fox" }), 11, 11),
+            new Scenario("同级 普2+精2 · lv12", W(new[] { "en_rat", "en_bear", "en_bird", "en_fox" }), 12, 12),
+            new Scenario("同级 小Boss · lv16", W(new[] { "en_jelly" }), 16, 16),
+            new Scenario("同级 波次 4+3+3 · lv10", W(
+                new[] { "en_bonefish", "en_stonelizard", "en_rat", "en_bear" },
+                new[] { "en_bird", "en_bird", "en_rat" },
+                new[] { "en_fox", "en_fox", "en_bear" }), 10, 10),
+        };
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("场景\t技能等级\t装备\t胜率\t平均回合\t平均时长s\t我方剩血%\t存活");
+        foreach (var baseSc in scs)
+        {
+            for (int rank = 1; rank <= 3; rank++)
+            {
+                for (int g = 0; g < 2; g++)
+                {
+                    var sc = new Scenario(baseSc.name, baseSc.waves, baseSc.enemyLevel, baseSc.playerLevel, g == 1);
+                    sc.rank = rank;
+                    var list = Batch(cfg, sc, false, 100);
+                    var a = Agg(list);
+                    sb.AppendLine(string.Format("{0}\t{1}\t{2}\t{3:F0}%\t{4:F1}\t{5:F0}\t{6:F0}%\t{7:F2}",
+                        sc.name, LingJing.Data.SkillRanks.RankLabel(rank), g == 1 ? "满配" : "裸装",
+                        a.winRate * 100f, a.avgRounds, a.avgDuration, a.avgPlayerHp * 100f, a.avgAlive));
+                }
+            }
+        }
+        System.IO.File.WriteAllText(@"D:\ljjh\tmp\rank_sweep.txt", sb.ToString());
+        Debug.Log("[RankSweep]\n" + sb);
+    }
+
     static BattleResult? RunOne(BattleConfig cfg, Scenario sc, int seed)
     {
+        LingJing.Data.SkillRanks.forcedRank = sc.rank;   // 0 = 不强制
         var sim = new BattleSimulator(cfg, seed);
 
         for (int i = 0; i < Players.Length; i++)
         {
             var def = BattleDatabase.GetCreature(Players[i]);
             if (def == null) { Debug.LogError("[BattleReconcile] 缺 " + Players[i]); return null; }
-            sim.AddPlayer(def, sc.playerLevel, sc.freePoints, sc.geared ? FullGear() : null);
+            var equipped = LingJing.Data.SkillLoadout.Suggest(def, sc.playerLevel);   // 按等级自动配满 4 格
+            sim.AddPlayer(def, sc.playerLevel, sc.freePoints, sc.geared ? FullGear() : null, equipped);
         }
 
         int band = cfg.BandIndex(sc.enemyLevel);
@@ -367,7 +412,9 @@ public static class BattleReconcile
         }
 
         sim.Begin();
-        return sim.Run();
+        var res = sim.Run();
+        LingJing.Data.SkillRanks.forcedRank = 0;
+        return res;
     }
 
     static readonly string[] FullSetIds =

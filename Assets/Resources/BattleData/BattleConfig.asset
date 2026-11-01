@@ -51,6 +51,9 @@ MonoBehaviour:
   mpPotionRestore: 4
   playerActionsPerRound: 3
   healTalentConstant: 250
+  wavePowerDecay: 0.6
+  maxEnemyActionsPerRound: 3
+  healCapPercent: 0.25
   healSecondRatio: 0.5
   shieldTempDuration: 3
   qualityHpMul:
@@ -94,10 +97,10 @@ MonoBehaviour:
   - 3.1
   qualityAtkScale:
   - 1
-  - 2.15
-  - 2.3
-  - 2.7
-  - 3.1
+  - 2.75
+  - 5
+  - 5.6
+  - 6.2
   aoeDamageScale: 2
   waveClearHealPercent: 0.18
   waveClearSpirit: 3

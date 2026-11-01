@@ -23,6 +23,7 @@ namespace LingJing.Battle
         public bool interactive;
         /// <summary>交互模式下正在等玩家操作的自己人。</summary>
         public BattleUnit awaitingPlayer;
+        int enemyActionsThisRound;   // 本回合敌方已经行动几次（配合 maxEnemyActionsPerRound 排队）
 
         public int potions;
         public int mpPotions;      // 蓝瓶数量（回 MP，占一次行动）
@@ -126,8 +127,12 @@ namespace LingJing.Battle
             float qScale = ((config.qualityPowerScale != null && qi < config.qualityPowerScale.Length) ? config.qualityPowerScale[qi] : 1f);
             float qHp = (config.qualityHpScale != null && qi < config.qualityHpScale.Length) ? config.qualityHpScale[qi] : qScale;
             float qAtk = (config.qualityAtkScale != null && qi < config.qualityAtkScale.Length) ? config.qualityAtkScale[qi] : qScale;
-            float hpMul = config.qualityHpMul[qi] * config.levelBandHpMul[bandIndex] * config.enemyPowerScale * qHp;
-            float atkMul = config.qualityAtkMul[qi] * config.levelBandAtkMul[bandIndex] * config.enemyPowerScale * qAtk;
+            // 波次衰减：第 2 波起逐波变弱，让「10 只普通怪分三波」打得过（单波不受影响）
+            int waveIndex = Mathf.Max(0, waves.Count - 1);
+            float waveDecay = (waveIndex > 0 && config.wavePowerDecay > 0f && config.wavePowerDecay < 1f)
+                ? Mathf.Pow(config.wavePowerDecay, waveIndex) : 1f;
+            float hpMul = config.qualityHpMul[qi] * config.levelBandHpMul[bandIndex] * config.enemyPowerScale * qHp * waveDecay;
+            float atkMul = config.qualityAtkMul[qi] * config.levelBandAtkMul[bandIndex] * config.enemyPowerScale * qAtk * waveDecay;
 
             var u = new BattleUnit
             {
@@ -304,11 +309,12 @@ namespace LingJing.Battle
             float best = -1f;
             for (int i = 0; i < live.Count; i++)
             {
-                if (live[i].gauge >= config.gaugeThreshold && live[i].gauge > best)
-                {
-                    best = live[i].gauge;
-                    actor = live[i];
-                }
+                if (live[i].gauge < config.gaugeThreshold || live[i].gauge <= best) continue;
+                // 本回合敌方行动次数到上限 → 这只排队等下一回合（行动值不清零，优先度保留）
+                if (live[i].side == Side.Enemy && config.maxEnemyActionsPerRound > 0
+                    && enemyActionsThisRound >= config.maxEnemyActionsPerRound) continue;
+                best = live[i].gauge;
+                actor = live[i];
             }
             if (actor == null) return false;
 
@@ -321,6 +327,7 @@ namespace LingJing.Battle
                 return true;
             }
 
+            if (actor.side == Side.Enemy) enemyActionsThisRound++;
             TakeAction(actor);
             CollectLoot();
             return true;
@@ -481,6 +488,7 @@ namespace LingJing.Battle
         void EndRound()
         {
             playerActionsThisRound = 0;
+            enemyActionsThisRound = 0;      // 敌方每回合行动配额重置
             round++;
             focusThisRound.Clear();      // 怪的目标分散上限每回合重置
 
@@ -867,6 +875,8 @@ namespace LingJing.Battle
                     var t = healTargets[i];
                     if (!t.IsAlive) continue;
                     float first = t.MissingHp * calc.HealFirstRatio(actor, t);
+                    float cap = t.maxHp * config.healCapPercent;
+                    if (cap > 0f && first > cap) first = cap;
                     float healed = t.Heal(first);
                     t.ApplyStatus(StatusType.HealMark, 1, 2, healed * config.healSecondRatio, config.dotMaxStacks);
                     if (skill.dispelOne) t.ClearOneDebuff();

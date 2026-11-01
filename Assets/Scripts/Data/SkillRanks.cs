@@ -13,6 +13,9 @@ namespace LingJing.Data
 
         static Dictionary<string, int> cache;
 
+        /// <summary>测试/批测用：>0 时忽略存档，所有技能按这个等级算。</summary>
+        public static int forcedRank;
+
         static Dictionary<string, int> Map
         {
             get
@@ -35,6 +38,7 @@ namespace LingJing.Data
 
         public static int Get(string skillId)
         {
+            if (forcedRank > 0) return Mathf.Clamp(forcedRank, 1, 3);
             int r;
             return Map.TryGetValue(skillId, out r) ? r : 1;
         }

@@ -56,6 +56,15 @@ namespace LingJing.Data
 
         [Header("治疗（两段式）")]
         public float healTalentConstant = 250f;
+        [Tooltip("同一场里越靠后的波次越弱（0.85 = 每多一波，敌人生命与攻击 ×0.85）；单波不受影响")]
+        public float wavePowerDecay = 0.85f;
+
+        [Tooltip("每回合敌方最多行动几次（超出的排队等下一回合；用来避免多波次 10 打 3 的碾压）")]
+        public int maxEnemyActionsPerRound = 4;
+
+        [Tooltip("单次治疗最多占目标最大生命的比例（防「奶量 ≫ 单体 DPS」，也是给精英/Boss 破续航的口子）")]
+        public float healCapPercent = 0.25f;
+
         public float healSecondRatio = 0.5f;
 
         [Header("护盾")]

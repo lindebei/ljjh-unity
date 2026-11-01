@@ -76,6 +76,23 @@ namespace LingJing.Data
             return true;
         }
 
+        /// <summary>纯函数：按等级推荐 4 格（不碰存档，批测与自动截图用）。</summary>
+        public static SkillDefinition[] Suggest(CreatureDefinition def, int level)
+        {
+            var list = new SkillDefinition[Slots];
+            if (def == null || def.skillPool == null) return list;
+            int slot = 0;
+            for (int i = 0; i < def.skillPool.Length && slot < Slots; i++)
+            {
+                var sk = def.skillPool[i];
+                if (sk == null || sk.tier <= 1) continue;
+                if (sk.unlockLevel > level) continue;
+                list[slot] = sk;
+                slot++;
+            }
+            return list;
+        }
+
         /// <summary>给这只兽自动装满 4 格：按 unlockLevel 取已解锁里最靠前的 4 个（跳过普攻）。</summary>
         public static void AutoFill(CreatureDefinition def, int level)
         {
