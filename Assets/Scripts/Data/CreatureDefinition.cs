@@ -19,8 +19,34 @@ namespace LingJing.Data
         [Header("成长潜力（每兽合计 10.00，仅玩家兽有意义）")]
         public SixStatsF potentials = new SixStatsF(1f, 1f, 1f, 1f, 1f, 1f);
 
-        [Header("技能（普攻 / 主动 / 辅助 / 奥义）")]
+        [Header("技能（普攻 / 主动 / 辅助 / 奥义）—— 兼容旧代码，导入时自动填 skillPool 前四个")]
         public SkillDefinition[] skills = new SkillDefinition[4];
+
+        [Header("技能池（一境 8 个，按 unlockLevel 解锁；上阵只能带 4 个）")]
+        public SkillDefinition[] skillPool = new SkillDefinition[0];
+
+        /// <summary>该等级已经学会的技能（含普攻）。</summary>
+        public SkillDefinition[] KnownSkills(int level)
+        {
+            if (skillPool == null || skillPool.Length == 0) return skills;
+            int n = 0;
+            for (int i = 0; i < skillPool.Length; i++)
+                if (skillPool[i] != null && skillPool[i].unlockLevel <= level) n++;
+            var list = new SkillDefinition[n];
+            int k = 0;
+            for (int i = 0; i < skillPool.Length; i++)
+                if (skillPool[i] != null && skillPool[i].unlockLevel <= level) list[k++] = skillPool[i];
+            return list;
+        }
+
+        /// <summary>普攻（tier 1），永远不占上阵格。</summary>
+        public SkillDefinition BasicSkill()
+        {
+            if (skillPool != null)
+                for (int i = 0; i < skillPool.Length; i++)
+                    if (skillPool[i] != null && skillPool[i].tier == 1) return skillPool[i];
+            return skills != null && skills.Length > 0 ? skills[0] : null;
+        }
 
         [Header("敌方属性")]
         public Quality quality = Quality.Normal;

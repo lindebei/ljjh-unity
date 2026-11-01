@@ -35,6 +35,7 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
+  skillPool: []
   quality: 2
   enemySkillSet: Water
   placeholderColor: {r: 1, g: 1, b: 1, a: 1}

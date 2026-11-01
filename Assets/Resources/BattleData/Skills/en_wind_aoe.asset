@@ -12,6 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 95125eec6bcf9c343b9e8667063a46cd, type: 3}
   m_Name: en_wind_aoe
   m_EditorClassIdentifier: Assembly-CSharp::LingJing.Data.SkillDefinition
+  tier: 2
+  unlockLevel: 1
+  maxRank: 3
   id: en_wind_aoe
   displayName: "\u4E71\u6D41"
   type: 1

@@ -35,6 +35,15 @@ MonoBehaviour:
   - {fileID: 11400000, guid: e5fb994c5db4711449e3a220ec79b7e1, type: 2}
   - {fileID: 11400000, guid: 4b236fe536dd7ae429d3614a0b336b79, type: 2}
   - {fileID: 11400000, guid: fbe559f7b57e26945bec520c8d2f80d2, type: 2}
+  skillPool:
+  - {fileID: 11400000, guid: 253143194e53e154885b4c3748242c6b, type: 2}
+  - {fileID: 11400000, guid: e5fb994c5db4711449e3a220ec79b7e1, type: 2}
+  - {fileID: 11400000, guid: 4b236fe536dd7ae429d3614a0b336b79, type: 2}
+  - {fileID: 11400000, guid: 328c6ddff9fe4844ba3da0fbca8b381f, type: 2}
+  - {fileID: 11400000, guid: 77ff919e8038db0439e7078267a17cda, type: 2}
+  - {fileID: 11400000, guid: e0ded75cb8fe2dd46a679e499b6ba706, type: 2}
+  - {fileID: 11400000, guid: fbe559f7b57e26945bec520c8d2f80d2, type: 2}
+  - {fileID: 11400000, guid: bd1f9c99510b841429a7419549fea636, type: 2}
   quality: 0
   enemySkillSet: 
   placeholderColor: {r: 1, g: 1, b: 1, a: 1}

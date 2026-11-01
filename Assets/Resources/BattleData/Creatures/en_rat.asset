@@ -35,6 +35,7 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
+  skillPool: []
   quality: 0
   enemySkillSet: Wind
   placeholderColor: {r: 1, g: 1, b: 1, a: 1}

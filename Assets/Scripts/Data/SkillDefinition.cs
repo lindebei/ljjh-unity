@@ -10,6 +10,11 @@ namespace LingJing.Data
     public class SkillDefinition : ScriptableObject
     {
         [Header("标识")]
+        [Header("技能池（每兽 8 个，随等级解锁）")]
+        public int tier = 2;           // 1=普攻 2=一段 3=二段 4=三段 5=第二奥义
+        public int unlockLevel = 1;
+        public int maxRank = 3;
+
         public string id;
         public string displayName;
         public SkillType type;

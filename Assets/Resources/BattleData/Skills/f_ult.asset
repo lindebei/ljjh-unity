@@ -12,6 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 95125eec6bcf9c343b9e8667063a46cd, type: 3}
   m_Name: f_ult
   m_EditorClassIdentifier: Assembly-CSharp::LingJing.Data.SkillDefinition
+  tier: 4
+  unlockLevel: 20
+  maxRank: 3
   id: f_ult
   displayName: "\u711A\u5929\u6781"
   type: 3

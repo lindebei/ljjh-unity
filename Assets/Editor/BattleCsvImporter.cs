@@ -125,6 +125,9 @@ public static class BattleCsvImporter
             so.displayName = Get(r, "name");
             so.type = ParseEnum<SkillType>(Get(r, "type"), SkillType.Basic);
             so.element = ParseEnum<Element>(Get(r, "element"), Element.Water);
+            so.tier = GetInt(r, "tier", 2);
+            so.unlockLevel = GetInt(r, "unlockLevel", 1);
+            so.maxRank = Mathf.Max(1, GetInt(r, "maxRank", 3));
             so.spiritCost = GetInt(r, "cost");
             so.cooldown = GetInt(r, "cooldown");
             so.multiplier = GetFloat(r, "mult");
@@ -184,6 +187,21 @@ public static class BattleCsvImporter
             so.skills[(int)SkillType.Active] = Lookup(skills, Get(r, "sActive"));
             so.skills[(int)SkillType.Support] = Lookup(skills, Get(r, "sSupport"));
             so.skills[(int)SkillType.Ultimate] = Lookup(skills, Get(r, "sUlt"));
+
+            // 技能池：skillPool 列用 | 分隔，按 unlockLevel 升序排好
+            string poolRaw = Get(r, "skillPool");
+            if (!string.IsNullOrEmpty(poolRaw) && so.isPlayerBeast)
+            {
+                var ids = poolRaw.Split('|');
+                var list = new System.Collections.Generic.List<SkillDefinition>();
+                for (int k = 0; k < ids.Length; k++)
+                {
+                    var sk = Lookup(skills, ids[k].Trim());
+                    if (sk != null) list.Add(sk);
+                }
+                list.Sort((x, y) => x.unlockLevel.CompareTo(y.unlockLevel));
+                so.skillPool = list.ToArray();
+            }
             EditorUtility.SetDirty(so);
         }
     }

@@ -69,14 +69,14 @@ namespace LingJing.UI
         Text statusBanner;
 
         // 技能按钮 / 药品按钮上的图标（程序生成，见 Assets/Resources/Art/Icons）
-        readonly Image[] skillIcons = new Image[4];
+        readonly Image[] skillIcons = new Image[5];   // 0=普攻，1..4=上阵
         Image potionIcon;
         readonly Dictionary<string, Sprite> iconCache = new Dictionary<string, Sprite>();
         readonly Dictionary<BattleUnit, Transform> statusRows = new Dictionary<BattleUnit, Transform>();
         readonly Dictionary<BattleUnit, string> statusSignatures = new Dictionary<BattleUnit, string>();
         RectTransform floatLayer;
-        Button[] skillButtons = new Button[4];
-        Text[] skillLabels = new Text[4];
+        Button[] skillButtons = new Button[5];
+        Text[] skillLabels = new Text[5];   // 0=普攻，1..4=上阵
         Button potionButton;
         Button autoButton;                 // 自动战斗：等级 <15 时置灰（设计文档「自动战斗需等级 ≥15」）
         Button startButton;                // 编队面板的「开战」
@@ -260,22 +260,23 @@ namespace LingJing.UI
             br.anchoredPosition = Vector2.zero;
             br.sizeDelta = new Vector2(1520f, 190f);
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 5; i++)
             {
                 int idx = i;
-                var btn = MakeButton(bar.transform, "Skill" + i, "", new Vector2(-580f + i * 262f, 0f), new Vector2(248f, 126f));
+                // 5 个技能位（0=普攻，1..4=上阵），200 宽 / 间距 212
+                var btn = MakeButton(bar.transform, "Skill" + i, "", new Vector2(-520f + i * 212f, 0f), new Vector2(200f, 126f));
                 btn.onClick.AddListener(() => OnSkillClicked(idx));
                 skillButtons[i] = btn;
                 skillLabels[i] = btn.GetComponentInChildren<Text>();
-                skillIcons[i] = AddButtonIcon(btn, 66f, 12f);
-                IndentLabel(skillLabels[i], 84f);
+                skillIcons[i] = AddButtonIcon(btn, 58f, 10f);
+                IndentLabel(skillLabels[i], 74f);
             }
-            mpPotionButton = MakeButton(bar.transform, "MpPotionBtn", "魔药\n+4 MP", new Vector2(646f, 0f), new Vector2(150f, 120f));
+            mpPotionButton = MakeButton(bar.transform, "MpPotionBtn", "魔药\n+4 MP", new Vector2(638f, 0f), new Vector2(128f, 120f));
             mpPotionButton.onClick.AddListener(OnMpPotionClicked);
             mpPotionText = mpPotionButton.GetComponentInChildren<Text>();
             mpPotionButton.image.color = new Color(0.20f, 0.26f, 0.40f, 1f);
 
-            potionButton = MakeButton(bar.transform, "PotionBtn", "药品\n35% 血", new Vector2(486f, 0f), new Vector2(150f, 120f));
+            potionButton = MakeButton(bar.transform, "PotionBtn", "药品\n35% 血", new Vector2(494f, 0f), new Vector2(128f, 120f));
             potionButton.onClick.AddListener(OnPotionClicked);
             potionIcon = AddButtonIcon(potionButton, 52f, 10f);
             potionIcon.sprite = LoadIcon("potion");
@@ -355,7 +356,9 @@ namespace LingJing.UI
                     }
                 }
 
-                sim.AddPlayer(def, playerLevel, free, gear);
+                // 上阵技能：技能界面存了什么就带什么；一格都没配就按等级自动装满 4 格
+                var equipped = LingJing.Data.SkillLoadout.Resolve(def, playerLevel);
+                sim.AddPlayer(def, playerLevel, free, gear, equipped);
             }
 
             if (useRandomEncounter)
@@ -579,9 +582,9 @@ namespace LingJing.UI
             var first = sim.Alive(Side.Player).Count > 0 ? sim.Alive(Side.Player)[0] : null;
             if (first == null) return;
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 5; i++)
             {
-                var skill = first.def.Skill((SkillType)i);
+                var skill = first.SkillAt(i);
                 bool hasSkill = skill != null;
                 string cost = !hasSkill ? "-" : (skill.spiritCost < 0 ? "+1" : skill.spiritCost.ToString());
                 skillLabels[i].text = !hasSkill ? "—"
@@ -591,7 +594,7 @@ namespace LingJing.UI
                 if (skillIcons[i] != null)
                 {
                     skillIcons[i].sprite = hasSkill ? LoadIcon(skill.id) : null;
-                    skillIcons[i].enabled = hasSkill;
+                    skillIcons[i].enabled = hasSkill && skillIcons[i].sprite != null;   // 还没画图标的新技能别显示白方块
                     skillIcons[i].color = new Color(0.55f, 0.55f, 0.55f, 0.75f);
                 }
             }
@@ -926,7 +929,7 @@ namespace LingJing.UI
             if (actor == null) { pendingSlot = -1; return; }
             if (target == null || !target.IsAlive || target.side != Side.Enemy) return;
 
-            var skill = actor.def.Skill((SkillType)pendingSlot);
+            var skill = actor.SkillAt(pendingSlot);
             pendingSlot = -1;
             MarkTargetable(false);
             if (skill == null) return;
@@ -954,7 +957,7 @@ namespace LingJing.UI
         {
             var actor = sim.awaitingPlayer;
             if (actor == null) return;
-            var skill = actor.def.Skill((SkillType)slot);
+            var skill = actor.SkillAt(slot);
             if (skill == null) { Flash("这个槽位是空的"); return; }
             if (skill.spiritCost > 0 && actor.mp < skill.spiritCost) { Flash("这只兽的 MP 不够"); return; }
             if (actor.Cooldown(skill.id) > 0) { Flash(string.Format("冷却中（还要 {0} 次行动）", actor.Cooldown(skill.id))); return; }
@@ -988,9 +991,9 @@ namespace LingJing.UI
             statusBanner.text = "轮到 " + actor.displayName + " —— 选一个技能";
             statusBanner.color = new Color(1f, 0.9f, 0.5f);
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 5; i++)
             {
-                var skill = actor.def.Skill((SkillType)i);
+                var skill = actor.SkillAt(i);
                 bool hasSkill = skill != null;
                 bool usable = hasSkill
                               && (skill.spiritCost <= 0 || actor.mp >= skill.spiritCost)
@@ -1007,7 +1010,7 @@ namespace LingJing.UI
                 if (skillIcons[i] != null)
                 {
                     skillIcons[i].sprite = hasSkill ? LoadIcon(skill.id) : null;
-                    skillIcons[i].enabled = hasSkill;
+                    skillIcons[i].enabled = hasSkill && skillIcons[i].sprite != null;   // 还没画图标的新技能别显示白方块
                     skillIcons[i].color = usable ? Color.white : new Color(0.55f, 0.55f, 0.55f, 0.8f);
                 }
             }
@@ -1018,7 +1021,7 @@ namespace LingJing.UI
         void ClearButtons()
         {
             // 只置灰、不清文字：清空会留下四个黑方块，看起来像界面坏了
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 5; i++)
             {
                 skillButtons[i].interactable = false;
                 skillLabels[i].color = new Color(0.45f, 0.45f, 0.45f);

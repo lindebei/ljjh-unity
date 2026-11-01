@@ -74,6 +74,18 @@ namespace LingJing.Battle
         /// <summary>是否已经入场。多波战斗里，后面的批次先建好但不参战（行动条不动、不可被选为目标）。</summary>
         public bool inField = true;
 
+        /// <summary>上阵的 4 个技能（不含普攻）。普攻单独在 SkillAt(0)。</summary>
+        public LingJing.Data.SkillDefinition[] equipped = new LingJing.Data.SkillDefinition[4];
+
+        /// <summary>技能栏第 i 个按钮对应的技能：0 = 普攻，1..4 = 上阵技能。</summary>
+        public LingJing.Data.SkillDefinition SkillAt(int i)
+        {
+            if (i <= 0) return def != null ? def.BasicSkill() : null;
+            int k = i - 1;
+            if (equipped == null || k < 0 || k >= equipped.Length) return null;
+            return equipped[k];
+        }
+
         /// <summary>掉落是否已经掷过（同一只怪只掷一次）。</summary>
         public bool lootRolled;
 

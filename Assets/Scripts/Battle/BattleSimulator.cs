@@ -87,7 +87,7 @@ namespace LingJing.Battle
 
         // ------------------------------------------------------------------ 建队
 
-        public BattleUnit AddPlayer(CreatureDefinition def, int level, int[] freePoints, EquipmentLoadout loadout = null)
+        public BattleUnit AddPlayer(CreatureDefinition def, int level, int[] freePoints, EquipmentLoadout loadout = null, LingJing.Data.SkillDefinition[] equipped = null)
         {
             var s = BattleFormulas.PlayerStats(def.baseStats, level, def.potentials, freePoints);
             if (loadout != null && !loadout.IsEmpty())
@@ -109,6 +109,8 @@ namespace LingJing.Battle
                 maxHp = BattleFormulas.MaxHp(s.vit, level)
             };
             u.hp = u.maxHp;
+            if (equipped != null && equipped.Length > 0)
+                for (int k = 0; k < u.equipped.Length && k < equipped.Length; k++) u.equipped[k] = equipped[k];
             u.equipPower = loadout != null ? loadout.Power() : 0f;
             u.power = BattleFormulas.Power(s, level, u.equipPower);
             units.Add(u);
