@@ -2,6 +2,9 @@ using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using LingJing.Battle;
+using LingJing.Data;
+using LingJing.UI;
 
 /// <summary>
 /// 自动截图：打开 BattlePrototype、进 Play 模式，按「事件」而不是固定帧号抓图，然后退出编辑器。
@@ -24,6 +27,7 @@ public static class BattleAutoShot
     static int exitCountdown;
     static bool equipShotTaken;
     static bool forceFormationShot;
+    const string ShieldKey = "ljjh.autoshot.shield";
     static double startedAt;
     static float waitStartedAt;
 
@@ -57,6 +61,19 @@ public static class BattleAutoShot
     }
 
     /// <summary>技能界面单独截一张。</summary>
+    /// <summary>护盾显示自检：进战斗后直接给前两只我方上盾，截一张看血条上的靛蓝条。</summary>
+    public static void RunShield()
+    {
+        ScenePath = "Assets/Scenes/BattlePrototype.unity";
+        // 先开场景再找 HUD：之前就是顺序反了，FindObjectOfType 返回 null，盾一直没上（白跑好几轮）
+        if (File.Exists(ScenePath)) EditorSceneManager.OpenScene(ScenePath);
+        var sh = Object.FindObjectOfType<LingJing.UI.BattleHud>();
+        if (sh != null) sh.debugShieldOnStart = true;
+        Debug.Log("[BattleAutoShot] RunShield: HUD=" + (sh != null ? "found" : "NULL"));
+        EditorPrefs.SetBool(ShieldKey, true);   // 必须写 EditorPrefs：进 Play 会域重载，静态字段会被清掉
+        Run();
+    }
+
     public static void RunSkill()
     {
         ScenePath = "Assets/Scenes/SkillScreen.unity";
@@ -198,6 +215,28 @@ public static void Run()
             Capture("99_timeout.png");
             Finish();
             return;
+        }
+
+        // 护盾自检：BattleHud.Start() 可能在 90 帧之后才真正 StartBattle() 重建单位，
+        // 所以这里连续 200 帧都补一遍（只补 shield==0 的），确保截图时单位上确实有盾。
+        if (EditorPrefs.GetBool(ShieldKey, false) && frames < 260)
+        {
+            var myHud = Hud();
+            if (myHud != null && myHud.Simulator != null)
+            {
+                int n = 0;
+                foreach (var u in myHud.Simulator.units)
+                {
+                    if (u.side != Side.Player || !u.IsAlive) continue;
+                    if (u.shield <= 0.5f) u.shield = u.maxHp * (n == 0 ? 0.28f : 0.12f);
+                    if (++n >= 2) break;
+                }
+            }
+            if (frames > 200)
+            {
+                EditorPrefs.SetBool(ShieldKey, false);
+                Debug.Log("[BattleAutoShot] 护盾自检：已上盾（连续补 200 帧）");
+            }
         }
 
         switch (phase)

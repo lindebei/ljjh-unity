@@ -55,7 +55,7 @@ namespace LingJing.UI
         Button mpPotionButton;
         int pendingSlot = -1;              // >=0 表示正等玩家点目标
         bool pendingAlly;                  // true=这次点的是友方（辅助/治疗）
-        readonly Dictionary<BattleUnit, Text> shieldTexts = new Dictionary<BattleUnit, Text>();
+        readonly Dictionary<BattleUnit, RectTransform> shieldFills = new Dictionary<BattleUnit, RectTransform>();   // 护盾覆盖条（靛蓝，盖在血条上）
         readonly Dictionary<BattleUnit, Text> gaugeTexts = new Dictionary<BattleUnit, Text>();
         readonly Dictionary<BattleUnit, RectTransform> cardRects = new Dictionary<BattleUnit, RectTransform>();
         readonly Dictionary<BattleUnit, Image> cardImages = new Dictionary<BattleUnit, Image>();
@@ -387,6 +387,20 @@ namespace LingJing.UI
 
             sim.Begin();
             sim.ActionStarted += OnActionStarted;
+
+            // 调试：开战直接上盾（只为检查靛蓝护盾条长什么样）
+            if (debugShieldOnStart)
+            {
+                int n = 0;
+                for (int i = 0; i < sim.units.Count; i++)
+                {
+                    var u = sim.units[i];
+                    if (u.side != Side.Player || !u.IsAlive) continue;
+                    u.shield = u.maxHp * (n == 0 ? 0.28f : 0.12f);
+                    if (++n >= 2) break;
+                }
+            }
+
             BuildUnitWidgets();
             RaiseGaugePanel();
             RefreshAll();
@@ -402,6 +416,9 @@ namespace LingJing.UI
 
         [Tooltip("试玩阶段先藏起来；要恢复自动战斗按钮改成 true 即可")]
         public bool showAutoBattleButton = false;
+
+        [Tooltip("调试用：开战时直接给前两只我方上盾，方便检查靛蓝护盾条")]
+        public bool debugShieldOnStart = false;
         static readonly int AutoBattleUnlockLevel = 15;
 
         void UpdateAutoButton()
@@ -723,6 +740,20 @@ namespace LingJing.UI
                 // 不然血条会伸出卡片右边（childControlWidth=false 时布局不会帮你压窄）
                 var hpBar = MakeBar(col, "Hp", new Color(0.85f, 0.25f, 0.25f), tw, 26f);
                 hpFills[u] = hpBar.Item2;
+
+                // 护盾：直接往血条容器里塞一张靛蓝 Image，锚点每次刷新时算
+                var shieldGo = new GameObject("ShieldFill", typeof(Image));
+                shieldGo.transform.SetParent(hpBar.Item1, false);
+                var shieldImg = shieldGo.GetComponent<Image>();
+                shieldImg.color = new Color(0.29f, 0.20f, 0.72f, 0.88f);
+                shieldImg.raycastTarget = false;
+                var shieldRt = shieldImg.rectTransform;
+                shieldRt.anchorMin = Vector2.zero;
+                shieldRt.anchorMax = Vector2.one;
+                shieldRt.offsetMin = Vector2.zero;
+                shieldRt.offsetMax = Vector2.zero;
+                shieldGo.SetActive(false);
+                shieldFills[u] = shieldRt;
                 hpTexts[u] = MakeText(hpBar.Item1, "HpText", "", 17, Color.white, TextAnchor.MiddleCenter,
                     new Vector2(0f, 0f), new Vector2(tw, 26f), new Vector2(0f, 0f), Vector2.zero);
                 Stretch(hpTexts[u].rectTransform);
@@ -735,8 +766,6 @@ namespace LingJing.UI
                 {
                     var mpBar = MakeBar(col, "Mp", new Color(0.36f, 0.68f, 1f), tw, 17f);
                     mpFills[u] = mpBar.Item2;
-                shieldTexts[u] = MakeText(col, "Shield", "", 14, new Color(0.55f, 0.85f, 1f), TextAnchor.MiddleLeft,
-                    new Vector2(0f, 1f), new Vector2(tw, 16f), new Vector2(0f, 1f), Vector2.zero);
                     mpTexts[u] = MakeText(mpBar.Item1, "MpText", "", 14, Color.white, TextAnchor.MiddleCenter,
                         new Vector2(0f, 0f), new Vector2(tw, 17f), new Vector2(0f, 0f), Vector2.zero);
                     Stretch(mpTexts[u].rectTransform);
@@ -1087,8 +1116,17 @@ namespace LingJing.UI
                 if (hpFills.ContainsKey(u))
                 {
                     hpFills[u].anchorMax = new Vector2(Mathf.Clamp01(u.hp / Mathf.Max(1f, u.maxHp)), 1f);
-                    hpTexts[u].text = string.Format("{0:F0}/{1:F0}{2}", u.hp, u.maxHp,
-                        u.shield > 0.5f ? "   盾 " + u.shield.ToString("F0") : "");
+                    hpTexts[u].text = string.Format("{0:F0}/{1:F0}", u.hp, u.maxHp);
+                    if (shieldFills.ContainsKey(u))
+                    {
+                        var sf = shieldFills[u];
+                        float ratio = Mathf.Clamp01(u.shield / Mathf.Max(1f, u.maxHp));
+                        sf.gameObject.SetActive(u.shield > 0.5f);
+                        sf.anchorMin = new Vector2(0f, 0f);
+                        sf.anchorMax = new Vector2(ratio, 1f);
+                        sf.offsetMin = Vector2.zero;
+                        sf.offsetMax = Vector2.zero;
+                    }
                 }
                 if (gaugeMarkers.ContainsKey(u))
                 {
@@ -1135,11 +1173,6 @@ namespace LingJing.UI
                 {
                     mpFills[u].anchorMax = new Vector2(Mathf.Clamp01(u.mp / (float)Mathf.Max(1, u.mpMax)), 1f);
                     mpTexts[u].text = string.Format("MP {0}/{1}", u.mp, u.mpMax);
-                if (shieldTexts.ContainsKey(u))
-                {
-                    shieldTexts[u].text = u.shield > 0.5f ? string.Format("盾 {0}", Mathf.RoundToInt(u.shield)) : "";
-                    shieldTexts[u].transform.SetAsLastSibling();
-                }
                 }
             }
             if (mpPotionText != null) mpPotionText.text = string.Format("魔药 {0}\n+4 MP", sim.mpPotions);
