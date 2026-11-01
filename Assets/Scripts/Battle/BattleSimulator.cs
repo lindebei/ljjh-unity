@@ -119,10 +119,13 @@ namespace LingJing.Battle
         {
             var s = BattleFormulas.EnemyStats(def.baseStats, level);
             int qi = (int)def.quality;
-            float qScale = config.enemyPowerScale *
-                ((config.qualityPowerScale != null && qi < config.qualityPowerScale.Length) ? config.qualityPowerScale[qi] : 1f);
-            float hpMul = config.qualityHpMul[qi] * config.levelBandHpMul[bandIndex] * qScale;
-            float atkMul = config.qualityAtkMul[qi] * config.levelBandAtkMul[bandIndex] * qScale;
+            // 品质强度拆成「血」和「攻」两把独立旋钮：
+            // 只调一个数会同时把血和攻拉高，结果胜负被 30 回合上限左右（要么秒掉、要么打不完）。
+            float qScale = ((config.qualityPowerScale != null && qi < config.qualityPowerScale.Length) ? config.qualityPowerScale[qi] : 1f);
+            float qHp = (config.qualityHpScale != null && qi < config.qualityHpScale.Length) ? config.qualityHpScale[qi] : qScale;
+            float qAtk = (config.qualityAtkScale != null && qi < config.qualityAtkScale.Length) ? config.qualityAtkScale[qi] : qScale;
+            float hpMul = config.qualityHpMul[qi] * config.levelBandHpMul[bandIndex] * config.enemyPowerScale * qHp;
+            float atkMul = config.qualityAtkMul[qi] * config.levelBandAtkMul[bandIndex] * config.enemyPowerScale * qAtk;
 
             var u = new BattleUnit
             {

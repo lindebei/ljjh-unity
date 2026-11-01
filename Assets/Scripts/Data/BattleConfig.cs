@@ -80,6 +80,13 @@ namespace LingJing.Data
         // 用户口径：普通怪满波次可以 100%；精英满波次无装备 70–80%；Boss 无装备 40%。
         public float[] qualityPowerScale = { 1.0f, 1.70f, 3.20f, 3.60f, 4.00f };
 
+        // 品质强度拆成两把旋钮（索引 0–4 = 普通/精英/小Boss/中Boss/大Boss）
+        // · qualityHpScale 只管血，控制「一场能打多久」
+        // · qualityAtkScale 只管攻，控制「有多危险」
+        // 只用一个系数会同时拉两条曲线，胜负被 30 回合上限左右（要么秒掉、要么打不完，没有中间态）
+        public float[] qualityHpScale = { 1f, 2.15f, 2.30f, 2.70f, 3.10f };
+        public float[] qualityAtkScale = { 1f, 2.15f, 2.30f, 2.70f, 3.10f };
+
         /// <summary>全体技能（AoE）的伤害额外倍率。提清场效率用，不动 skills.csv 的设计倍率。</summary>
         public float aoeDamageScale = 1f;
 
