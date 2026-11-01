@@ -76,6 +76,44 @@ public static class PlaytestFixCheck
         log.AppendLine(string.Format("⑥ 磐石（自盾+嘲讽）→ 按 {0}  {1}",
             SkillTargeting.EffectiveSide(shield2),
             SkillTargeting.EffectiveSide(shield2) == TargetSide.Self ? "PASS" : "FAIL"));
+        // ---- ⑦ 减益辅助：潮噬（HealDown）打到敌人 ----
+        var sim3 = new BattleSimulator(cfg, 7);
+        for (int i = 0; i < 3; i++) sim3.AddPlayer(BattleDatabase.GetCreature(i == 0 ? "beast_water" : (i == 1 ? "beast_fire" : "beast_wind")), 24, new[] { 23, 23, 23, 23, 23, 23 });
+        sim3.AddEnemy(BattleDatabase.GetCreature("en_bonefish"), 10, 1);
+        sim3.Begin();
+        var debuffSkill = BattleDatabase.GetSkill("w_debuff");
+        sim3.awaitingPlayer = sim3.units[0];
+        sim3.ResolvePlayerTurn(debuffSkill, sim3.units[3]);
+        bool downApplied = sim3.units[3].HasStatus(StatusType.HealDown);
+        log.AppendLine(string.Format("⑦ 潮噬（减益辅助）→ 目标 HealDown={0}  {1}", downApplied, downApplied ? "PASS" : "FAIL"));
+
+        // ---- ⑧ 岩缚：35% 眩晕，多试几次至少要中一次 ----
+        var rock = BattleDatabase.GetSkill("e_debuff");
+        int stunHits = 0;
+        for (int k = 0; k < 30; k++)
+        {
+            var simS = new BattleSimulator(cfg, 100 + k);
+            for (int i = 0; i < 3; i++) simS.AddPlayer(BattleDatabase.GetCreature("beast_earth"), 24, new[] { 23, 23, 23, 23, 23, 23 });
+            simS.AddEnemy(BattleDatabase.GetCreature("en_bonefish"), 10, 1);
+            simS.Begin();
+            simS.awaitingPlayer = simS.units[0];
+            simS.ResolvePlayerTurn(rock, simS.units[3]);
+            if (simS.units[3].HasStatus(StatusType.Stun)) stunHits++;
+        }
+        log.AppendLine(string.Format("⑧ 岩缚（35% 眩晕）30 次里中了 {0} 次  {1}", stunHits, stunHits > 0 ? "PASS" : "FAIL"));
+
+        // ---- ⑨ 缠风：削行动值 ----
+        var wind = BattleDatabase.GetSkill("a_debuff");
+        var simW = new BattleSimulator(cfg, 9);
+        for (int i = 0; i < 3; i++) simW.AddPlayer(BattleDatabase.GetCreature(i == 0 ? "beast_wind" : (i == 1 ? "beast_fire" : "beast_water")), 24, new[] { 23, 23, 23, 23, 23, 23 });
+        simW.AddEnemy(BattleDatabase.GetCreature("en_bonefish"), 10, 1);
+        simW.Begin();
+        simW.units[3].gauge = 80f;
+        simW.awaitingPlayer = simW.units[0];
+        simW.ResolvePlayerTurn(wind, simW.units[3]);
+        bool pushed = simW.units[3].gauge < 80f;
+        log.AppendLine(string.Format("⑨ 缠风削行动值：80 → {0:0}  {1}", simW.units[3].gauge, pushed ? "PASS" : "FAIL"));
+
         Object.DestroyImmediate(debuff);
         Object.DestroyImmediate(cfg);
         System.IO.File.WriteAllText("D:/ljjh/tmp/playtest_fix.txt", log.ToString());

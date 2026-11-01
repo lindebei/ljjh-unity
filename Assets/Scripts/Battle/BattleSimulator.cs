@@ -321,6 +321,15 @@ namespace LingJing.Battle
             actor.gauge = 0f;
             actor.actionsTaken++;
 
+            // 眩晕：这一次行动直接跳过（行动值仍然清零，等于白白浪费一拍）
+            if (actor.HasStatus(StatusType.Stun))
+            {
+                actor.RemoveStatus(StatusType.Stun);
+                Log(actor.displayName + " 被眩晕，跳过这次行动");
+                AfterAction(actor);
+                return true;
+            }
+
             if (actor.side == Side.Player && interactive)
             {
                 awaitingPlayer = actor;
@@ -953,6 +962,7 @@ namespace LingJing.Battle
                                 t.ApplyStatus(skill.appliedStatus, skill.dotStacks, config.dotDuration, 0f, config.dotMaxStacks);
                             if (skill.gaugePushbackPercent > 0f)
                                 t.gauge = Mathf.Max(0f, t.gauge - config.gaugeThreshold * skill.gaugePushbackPercent);
+                            TryApplyControl(actor, skill, t);
                             if (verbose)
                                 Log(string.Format("{0} → {1} {2:F0}", actor.displayName, t.displayName, dealt));
                         }
@@ -969,10 +979,34 @@ namespace LingJing.Battle
                                 t.ApplyStatus(skill.appliedStatus, skill.dotStacks, config.dotDuration, 0f, config.dotMaxStacks);
                             if (skill.gaugePushbackPercent > 0f)
                                 t.gauge = Mathf.Max(0f, t.gauge - config.gaugeThreshold * skill.gaugePushbackPercent);
+                            TryApplyControl(actor, skill, t);
                             if (verbose)
                                 Log(string.Format("{0} → {1} 第{2}段 {3:F0}", actor.displayName, t.displayName, s + 1, dealt));
                         }
                     }
+                }
+            }
+
+        /// <summary>控制类效果：按 controlChance 掷一次，命中就给目标挂眩晕（controlDuration 回合）。</summary>
+        void TryApplyControl(BattleUnit actor, SkillDefinition skill, BattleUnit target)
+        {
+            if (target == null || !target.IsAlive) return;
+            if (skill.controlChance <= 0f || skill.controlDuration <= 0) return;
+            if (rng.NextDouble() > skill.controlChance) return;
+            target.ApplyStatus(StatusType.Stun, 1, skill.controlDuration, 0f, 99);
+            Log(string.Format("{0} 被 {1} 眩晕 {2} 回合", target.displayName, skill.displayName, skill.controlDuration));
+        }
+
+            // 纯减益辅助（没有伤害倍率）：状态要自己挂，不能指望伤害段顺手挂上
+            if (skill.appliedStatus != StatusType.None && skill.dotStacks > 0 && skill.multiplier <= 0f)
+            {
+                var st = SkillTargeting.EffectiveSide(skill) == TargetSide.AllEnemies ? Alive(Side.Enemy) : targets;
+                for (int i = 0; i < st.Count; i++)
+                {
+                    var t = st[i];
+                    if (t == null || !t.IsAlive) continue;
+                    t.ApplyStatus(skill.appliedStatus, skill.dotStacks, config.dotDuration, 0f, config.dotMaxStacks);
+                    if (verbose) Log(string.Format("{0} 给 {1} 挂 {2} ×{3}", actor.displayName, t.displayName, skill.appliedStatus, skill.dotStacks));
                 }
             }
 

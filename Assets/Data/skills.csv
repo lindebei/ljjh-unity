@@ -47,3 +47,7 @@ e_t2,碎岩击,Active,Earth,2,2,1.80,3,true,Enemy,None,0,0,0,0,false,false,false
 e_t3,坚壁,Support,Earth,2,2,0,1,false,AllAllies,None,0,0,0,0,false,false,true,false,0.15,false,false,0,0,false,3,12,3
 e_t4,崩塌,Active,Earth,3,2,2.50,1,false,Enemy,None,0,0,0.25,1,false,false,false,false,0,false,false,0,0,false,4,16,3
 e_t5,山川崩,Ultimate,Earth,4,3,2.10,1,false,AllEnemies,Poison,2,0,0,0,false,false,false,false,0,false,false,0,0,false,5,24,3
+w_debuff,潮噬,Support,Water,2,2,0,1,false,Enemy,HealDown,1,0,2,0,false,false,false,false,0,false,false,0,0,false,3,10,3
+f_debuff,灼印,Support,Fire,2,2,0,1,false,Enemy,Burn,3,0,0,0,false,false,false,false,0,false,false,0,0,false,3,10,3
+a_debuff,缠风,Support,Wind,2,2,0.50,1,false,Enemy,None,0,0,0,25,false,false,false,false,0,false,false,0,0,false,3,10,3
+e_debuff,岩缚,Support,Earth,2,3,0.60,1,false,Enemy,None,0,0.35,1,0,false,false,false,false,0,false,false,0,0,false,3,10,3

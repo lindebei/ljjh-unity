@@ -163,7 +163,7 @@ public static class V01Acceptance
             return new R(ok, string.Format("倍率 {0:F2}→{1:F2}，蓝耗 {2}→{3}，冷却 {4}→{5}", m1, m3, c1, c3, d1, d3));
         });
 
-        Check("A-12", "技能池结构：每兽 8 个、上阵 4 格、奥义 ≤1", () =>
+        Check("A-12", "技能池结构：每兽 8–9 个、上阵 4 格、奥义 ≤1", () =>
         {
             var ids = new[] { "beast_water", "beast_fire", "beast_wind", "beast_earth" };
             var det = new List<string>();
@@ -176,7 +176,7 @@ public static class V01Acceptance
                 int ults = 0;
                 foreach (var s in eq) if (s != null && s.targetSide == TargetSide.AllEnemies) ults++;
                 det.Add(string.Format("{0}: 池 {1} / 上阵 {2} 全体技 {3}", id, pool, CountNonNull(eq), ults));
-                if (pool != 8) ok = false;
+                if (pool < 8 || pool > 9) ok = false;   // 2026-11-02 每个灵加了一个减益辅助，池变 9
                 if (CountNonNull(eq) > 4) ok = false;
                 if (ults > 2) ok = false;   // 全体技最多 2 个（含主动 AOE）
             }

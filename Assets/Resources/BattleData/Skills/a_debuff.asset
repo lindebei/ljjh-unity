@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 95125eec6bcf9c343b9e8667063a46cd, type: 3}
+  m_Name: a_debuff
+  m_EditorClassIdentifier: Assembly-CSharp::LingJing.Data.SkillDefinition
+  tier: 3
+  unlockLevel: 10
+  maxRank: 3
+  id: a_debuff
+  displayName: "\u7F20\u98CE"
+  type: 2
+  element: 2
+  spiritCost: 2
+  cooldown: 2
+  multiplier: 0.5
+  segments: 1
+  spreadSegments: 0
+  targetSide: 0
+  targetCount: 1
+  requiresHitCheck: 1
+  appliedStatus: 0
+  dotStacks: 0
+  controlChance: 0
+  controlDuration: 0
+  gaugePushbackPercent: 25
+  taunt: 0
+  selfAppliesStatus: 0
+  isHeal: 0
+  isShield: 0
+  shieldPercent: 0
+  dispelOne: 0
+  healAllAllies: 0
+  buffPercent: 0
+  buffDuration: 0
+  buffStatus: 0
+  buffIsAttack: 0
+  vfxKey: 
