@@ -13,7 +13,7 @@ a_support,疾风,Support,Wind,2,2,0,1,false,AllAllies,None,0,0,0,0,false,false,f
 a_ult,天风回响,Ultimate,Wind,4,3,3.00,1,false,AllEnemies,None,0,0,0,0.30,false,false,false,false,0,false,false,0,0,false,4,20,3
 e_basic,岩击,Basic,Earth,-1,0,0.75,1,false,Enemy,None,0,0,0,0,false,false,false,false,0,false,false,0,0,false,1,1,3
 e_active,地裂,Active,Earth,3,0,1.20,1,false,AllEnemies,Poison,1,0.25,1,0,false,false,false,false,0,false,false,0,0,false,2,1,3
-e_support,磐石,Support,Earth,2,2,0,1,false,Self,None,0,0,0,0,true,false,false,true,0.20,false,false,0,0,false,3,4,3
+e_support,磐石,Support,Earth,2,2,0,1,false,Ally,None,0,0,0,0,true,false,false,true,0.20,false,false,0,0,false,3,4,3
 e_ult,镇岳,Ultimate,Earth,4,3,0,1,false,AllAllies,None,0,0,0,0,false,false,false,true,0.25,false,false,0,0,false,4,20,3
 en_water_basic,潮拍,Basic,Water,0,0,1.00,1,false,Enemy,None,0,0,0,0,false,false,false,false,0,false,false,0,0,false,1,1,3
 en_water_active,漩涡,Active,Water,0,2,1.90,1,false,Enemy,None,0,0,0,0,false,false,false,false,0,false,false,0,0,false,2,1,3

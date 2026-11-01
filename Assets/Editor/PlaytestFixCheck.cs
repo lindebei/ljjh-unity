@@ -114,6 +114,22 @@ public static class PlaytestFixCheck
         bool pushed = simW.units[3].gauge < 80f;
         log.AppendLine(string.Format("⑨ 缠风削行动值：80 → {0:0}  {1}", simW.units[3].gauge, pushed ? "PASS" : "FAIL"));
 
+        // ---- ⑩ 磐石：护盾可以给选中的队友（不是只能给自己） ----
+        var simS2 = new BattleSimulator(cfg, 21);
+        for (int i = 0; i < 3; i++) simS2.AddPlayer(BattleDatabase.GetCreature(i == 0 ? "beast_earth" : (i == 1 ? "beast_water" : "beast_fire")), 24, new[] { 23, 23, 23, 23, 23, 23 });
+        simS2.AddEnemy(BattleDatabase.GetCreature("en_bonefish"), 10, 1);
+        simS2.Begin();
+        var rock2 = BattleDatabase.GetSkill("e_support");
+        var caster = simS2.units[0];
+        var mate = simS2.units[1];
+        simS2.awaitingPlayer = caster;
+        simS2.ResolvePlayerTurn(rock2, mate);          // 故意选队友
+        bool mateShielded = mate.shield > 0.5f;
+        bool casterClean = caster.shield <= 0.5f;
+        bool tauntOnCaster = caster.tauntRounds > 0;
+        log.AppendLine(string.Format("⑩ 磐石给队友上盾：队友 shield={0:F0}（自身上盾={1}）嘲讽在自己身上={2}  {3}",
+            mate.shield, !casterClean, tauntOnCaster, (mateShielded && casterClean && tauntOnCaster) ? "PASS" : "FAIL"));
+
         Object.DestroyImmediate(debuff);
         Object.DestroyImmediate(cfg);
         System.IO.File.WriteAllText("D:/ljjh/tmp/playtest_fix.txt", log.ToString());
