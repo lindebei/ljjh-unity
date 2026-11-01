@@ -268,6 +268,7 @@ namespace LingJing.UI
             IndentLabel(potionButton.GetComponentInChildren<Text>(), 66f);
 
             // 自动战斗：设计文档要求「等级 ≥15 才解锁」，低于 15 级置灰并写明原因
+            // 2026-11-01 用户要求先藏起来（试玩阶段不想让人一键跳过操作），改 showAutoBattleButton 一个开关即可恢复
             autoButton = MakeButton(canvasGo.transform, "AutoBtn", "", new Vector2(0f, 0f), new Vector2(240f, 56f));
             var abrt = autoButton.GetComponent<RectTransform>();
             abrt.anchorMin = new Vector2(1f, 1f);      // 右上角：日志面板左边、行动条右边
@@ -275,6 +276,7 @@ namespace LingJing.UI
             abrt.pivot = new Vector2(1f, 1f);
             abrt.anchoredPosition = new Vector2(-344f, -6f);
             autoButton.onClick.AddListener(OnAutoClicked);
+            autoButton.gameObject.SetActive(showAutoBattleButton);
             UpdateAutoButton();
 
             // 右：日志
@@ -361,6 +363,8 @@ namespace LingJing.UI
 
         // ------------------------------------------------------------------ 自动战斗
 
+        [Tooltip("试玩阶段先藏起来；要恢复自动战斗按钮改成 true 即可")]
+        public bool showAutoBattleButton = false;
         static readonly int AutoBattleUnlockLevel = 15;
 
         void UpdateAutoButton()
