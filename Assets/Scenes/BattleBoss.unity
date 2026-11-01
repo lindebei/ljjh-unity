@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &311922480
+--- !u!1 &1077640277
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,8 +127,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 311922482}
-  - component: {fileID: 311922481}
+  - component: {fileID: 1077640279}
+  - component: {fileID: 1077640278}
   m_Layer: 0
   m_Name: BattleRunner
   m_TagString: Untagged
@@ -136,13 +136,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &311922481
+--- !u!114 &1077640278
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 311922480}
+  m_GameObject: {fileID: 1077640277}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: cf75cffe2b0dbe34394ba7bbbf731dbe, type: 3}
@@ -151,21 +151,21 @@ MonoBehaviour:
   playerLevel: 24
   enemyLevel: 10
   enemyIds:
-  - en_bonefish
-  - en_stonelizard
   - en_jelly
+  - en_tigerking
+  - en_snake
   enemyIdsWave2: []
   timeScale: 1
   autoBattle: 0
   equipFullSet: 1
   skipFormation: 0
---- !u!4 &311922482
+--- !u!4 &1077640279
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 311922480}
+  m_GameObject: {fileID: 1077640277}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -174,7 +174,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &327600275
+--- !u!1 &1569112616
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -182,9 +182,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 327600278}
-  - component: {fileID: 327600277}
-  - component: {fileID: 327600276}
+  - component: {fileID: 1569112619}
+  - component: {fileID: 1569112618}
+  - component: {fileID: 1569112617}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -192,21 +192,21 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!81 &327600276
+--- !u!81 &1569112617
 AudioListener:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 327600275}
+  m_GameObject: {fileID: 1569112616}
   m_Enabled: 1
---- !u!20 &327600277
+--- !u!20 &1569112618
 Camera:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 327600275}
+  m_GameObject: {fileID: 1569112616}
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
@@ -251,13 +251,13 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
---- !u!4 &327600278
+--- !u!4 &1569112619
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 327600275}
+  m_GameObject: {fileID: 1569112616}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: -10}
@@ -270,5 +270,5 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 327600278}
-  - {fileID: 311922482}
+  - {fileID: 1569112619}
+  - {fileID: 1077640279}
