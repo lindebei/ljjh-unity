@@ -58,7 +58,7 @@ namespace LingJing.UI
                 Vector2.zero, new Vector2(1920f, 1080f), new Vector2(0.5f, 0.5f));
             bg.raycastTarget = false;
 
-            MakeText(canvasGo.transform, "Title", "技能　（每只兽 8 个技能池 · 上场只带 4 个 · 普攻不占格）",
+            MakeText(canvasGo.transform, "Title", "技能　（每只兽 9 个技能池 · 上场只带 4 个 · 普攻不占格）",
                 30, new Color(0.85f, 0.90f, 0.96f), TextAnchor.MiddleLeft,
                 new Vector2(0f, 1f), new Vector2(1400f, 44f), new Vector2(0f, 1f), new Vector2(60f, -30f));
 
