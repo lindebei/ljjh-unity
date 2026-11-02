@@ -97,6 +97,15 @@ namespace LingJing.Data
         // · qualityAtkScale 只管攻，控制「有多危险」
         // 只用一个系数会同时拉两条曲线，胜负被 30 回合上限左右（要么秒掉、要么打不完，没有中间态）
         // 精英/Boss 的破续航：每次命中按概率给对方挂「减疗（治疗 −50%）」
+        [Header("精英/Boss 的威胁结构")]
+        [Tooltip("精英的主动技能一次能打几个我方目标（1=单体）")]
+        public int enemyEliteTargets = 2;
+        [Tooltip("中/大 Boss 的主动与奥义一次能打几个我方目标")]
+        public int enemyBossTargets = 3;
+        [Range(0f, 1f)]
+        [Tooltip("敌人奥义里按「真伤」结算的比例：无视防御减伤、无视护盾，直接进血条")]
+        public float enemyTrueDamagePercent = 0.35f;
+
         [Range(0f, 1f)] public float enemyHealDownChance = 0.45f;
         public int enemyHealDownRounds = 2;
         public float[] qualityHpScale = { 1f, 2.15f, 2.30f, 2.70f, 3.10f };

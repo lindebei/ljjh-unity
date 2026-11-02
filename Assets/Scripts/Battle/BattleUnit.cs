@@ -176,11 +176,11 @@ namespace LingJing.Battle
             }
         }
 
-        /// <summary>扣血。护盾先吃，返回实际进血条的伤害。</summary>
-        public float TakeDamage(float raw)
+        /// <summary>扣血。护盾先吃，返回实际进血条的伤害。ignoreShield=true 时是「真伤」，绕过护盾直接进血条。</summary>
+        public float TakeDamage(float raw, bool ignoreShield = false)
         {
             if (raw <= 0f) return 0f;
-            float absorbed = Mathf.Min(shield, raw);
+            float absorbed = ignoreShield ? 0f : Mathf.Min(shield, raw);
             shield -= absorbed;
             float toHp = raw - absorbed;
             hp = Mathf.Max(0f, hp - toHp);

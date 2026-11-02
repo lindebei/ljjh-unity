@@ -29,14 +29,14 @@ namespace LingJing.Battle
         }
 
         /// <summary>单段伤害（已含期望命中）。</summary>
-        public float ComputeHit(BattleUnit attacker, BattleUnit target, float multiplier)
+        public float ComputeHit(BattleUnit attacker, BattleUnit target, float multiplier, bool ignoreReduction = false)
         {
             int diff = attacker.level - target.level;
             float hit = config.HitChance(diff);
             float dmg = multiplier
                         * attacker.EffectiveAtk
                         * config.attackK
-                        * BattleFormulas.DamageReduction(target.EffectiveDef, config.defConstant)
+                        * (ignoreReduction ? 1f : BattleFormulas.DamageReduction(target.EffectiveDef, config.defConstant))
                         * ElementMultiplier(attacker.element, target.element)
                         * config.LevelDiffDamage(diff);
 
@@ -49,12 +49,25 @@ namespace LingJing.Battle
             return dmg * v;
         }
 
-        /// <summary>扣血并返回实际伤害。</summary>
-        public float Apply(BattleUnit attacker, BattleUnit target, float multiplier)
+        /// <summary>
+        /// 扣血并返回总伤害（含真伤部分）。
+        /// trueRatio > 0 时，这部分伤害按「真伤」算：不吃防御减伤、不吃护盾、直接进血条。
+        /// 精英/Boss 靠这个打穿「治疗 + 护盾」的续航，单靠堆攻只会变成二元断崖。
+        /// </summary>
+        public float Apply(BattleUnit attacker, BattleUnit target, float multiplier, float trueRatio = 0f)
         {
-            float dmg = ComputeHit(attacker, target, multiplier);
-            target.TakeDamage(dmg);
-            return dmg;
+            if (trueRatio <= 0f)
+            {
+                float d = ComputeHit(attacker, target, multiplier);
+                target.TakeDamage(d);
+                return d;
+            }
+
+            float normal = ComputeHit(attacker, target, multiplier) * (1f - trueRatio);
+            float truePart = ComputeHit(attacker, target, multiplier, true) * trueRatio;
+            if (normal > 0f) target.TakeDamage(normal);
+            if (truePart > 0f) target.TakeDamage(truePart, true);
+            return normal + truePart;
         }
 
         /// <summary>治疗第一段系数：天赋/(天赋+250)，湿润再 ×1.25，被减疗时腰斩。</summary>

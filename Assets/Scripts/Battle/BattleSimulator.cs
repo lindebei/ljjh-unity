@@ -821,6 +821,29 @@ namespace LingJing.Battle
                     return list;
                 }
 
+            // 精英/Boss 的威胁：主动与奥义能同时压 2–3 个人。
+            // 只打一个的话，治疗量必然盖过单体 DPS，胜负只剩「秒杀」和「打不动」两种（二元断崖）。
+            int want = 1;
+            if (skill.type == SkillType.Active || skill.type == SkillType.Ultimate)
+            {
+                if (actor.quality >= Quality.MidBoss) want = Mathf.Max(1, config.enemyBossTargets);
+                else if (actor.quality >= Quality.Elite) want = Mathf.Max(1, config.enemyEliteTargets);
+            }
+            if (want > 1)
+            {
+                var pool = new List<BattleUnit>(players);
+                pool.Sort((a, b) => a.hp.CompareTo(b.hp));      // 血少的优先，形成「集火压力」
+                for (int i = 0; i < pool.Count && list.Count < want; i++)
+                    if (!list.Contains(pool[i])) list.Add(pool[i]);
+                for (int i = 0; i < list.Count; i++)
+                {
+                    int f2;
+                    focusThisRound.TryGetValue(list[i], out f2);
+                    focusThisRound[list[i]] = f2 + 1;
+                }
+                return list;
+            }
+
             // 目标分散：同一回合里每个我方单位最多被 2 只怪盯上。
             // 不限制的话（原来直接挑血最少的），一波 4 只怪会全部砸同一个人，见谁秒谁。
             BattleUnit t = null;
@@ -948,6 +971,9 @@ namespace LingJing.Battle
                     if (scale != 1f) { aoeCastCount++; lastAoeScale = scale; }
 
                     float mul = skill.multiplier * scale * LingJing.Data.SkillRanks.MultiplierMul(skill);
+                    // 敌人奥义里有一部分是真伤：不吃防御减伤、不吃护盾。用来打穿「治疗 + 护盾」的续航。
+                    float trueRatio = (actor.side == Side.Enemy && skill.type == SkillType.Ultimate)
+                        ? Mathf.Clamp01(config.enemyTrueDamagePercent) : 0f;
                     int seg = Mathf.Max(1, skill.segments);
 
                     // 单段技能：伤害要落到「每一个目标」上（全体技能以前只打了第一个敌人，试玩里被抓出来）
@@ -957,7 +983,7 @@ namespace LingJing.Battle
                         {
                             var t = enemies[i];
                             if (t == null || !t.IsAlive) continue;
-                            float dealt = calc.Apply(actor, t, mul);
+                            float dealt = calc.Apply(actor, t, mul, trueRatio);
                             if (skill.appliedStatus != StatusType.None && skill.dotStacks > 0)
                                 t.ApplyStatus(skill.appliedStatus, skill.dotStacks, config.dotDuration, 0f, config.dotMaxStacks);
                             if (skill.gaugePushbackPercent > 0f)
@@ -974,7 +1000,7 @@ namespace LingJing.Battle
                         {
                             var t = enemies[skill.spreadSegments ? s % enemies.Count : 0];
                             if (t == null || !t.IsAlive) continue;
-                            float dealt = calc.Apply(actor, t, mul);
+                            float dealt = calc.Apply(actor, t, mul, trueRatio);
                             if (skill.appliedStatus != StatusType.None && skill.dotStacks > 0)
                                 t.ApplyStatus(skill.appliedStatus, skill.dotStacks, config.dotDuration, 0f, config.dotMaxStacks);
                             if (skill.gaugePushbackPercent > 0f)
