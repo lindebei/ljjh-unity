@@ -112,6 +112,17 @@ namespace LingJing.Battle
             u.hp = u.maxHp;
             if (equipped != null && equipped.Length > 0)
                 for (int k = 0; k < u.equipped.Length && k < equipped.Length; k++) u.equipped[k] = equipped[k];
+            // 治疗者标记：敌方 AI 靠它决定「先咬谁」
+            u.isHealer = false;
+            for (int k = 0; k < u.equipped.Length; k++)
+                if (u.equipped[k] != null && (u.equipped[k].isHeal || u.equipped[k].healAllAllies)) { u.isHealer = true; break; }
+            if (!u.isHealer && def != null)
+            {
+                var known = def.KnownSkills(level);
+                if (known != null)
+                    for (int k = 0; k < known.Length; k++)
+                        if (known[k] != null && (known[k].isHeal || known[k].healAllAllies)) { u.isHealer = true; break; }
+            }
             u.equipPower = loadout != null ? loadout.Power() : 0f;
             u.power = BattleFormulas.Power(s, level, u.equipPower);
             units.Add(u);
@@ -832,7 +843,14 @@ namespace LingJing.Battle
             if (want > 1)
             {
                 var pool = new List<BattleUnit>(players);
-                pool.Sort((a, b) => a.hp.CompareTo(b.hp));      // 血少的优先，形成「集火压力」
+                // 按威胁分排序：治疗 > 残血 > 脆皮 > 已被盯上的（集火补刀）
+                pool.Sort((a, b) =>
+                {
+                    int fa, fb;
+                    focusThisRound.TryGetValue(a, out fa);
+                    focusThisRound.TryGetValue(b, out fb);
+                    return b.ThreatScore(fb).CompareTo(a.ThreatScore(fa));
+                });
                 for (int i = 0; i < pool.Count && list.Count < want; i++)
                     if (!list.Contains(pool[i])) list.Add(pool[i]);
                 for (int i = 0; i < list.Count; i++)
@@ -847,27 +865,25 @@ namespace LingJing.Battle
             // 目标分散：同一回合里每个我方单位最多被 2 只怪盯上。
             // 不限制的话（原来直接挑血最少的），一波 4 只怪会全部砸同一个人，见谁秒谁。
             BattleUnit t = null;
-            int bestFocus = int.MaxValue;
-            float lowHp = float.MaxValue;
+            float bestScore = float.MinValue;
             for (int i = 0; i < players.Count; i++)
             {
                 int f;
                 if (!focusThisRound.TryGetValue(players[i], out f)) f = 0;
-                if (f >= 2) continue;
-                if (f < bestFocus || (f == bestFocus && players[i].hp < lowHp))
-                {
-                    bestFocus = f;
-                    lowHp = players[i].hp;
-                    t = players[i];
-                }
+                if (f >= 2) continue;                       // 同一个我方一回合最多被 2 只怪盯
+                float sc = players[i].ThreatScore(f);
+                if (sc > bestScore) { bestScore = sc; t = players[i]; }
             }
 
-            // 都被盯满 2 次了（怪特别多时）→ 退回「挑血最少的」
+            // 都被盯满 2 次了（怪特别多时）→ 退回「威胁分最高的那个」，不再按纯血量
             if (t == null)
             {
-                lowHp = float.MaxValue;
+                float fallback = float.MinValue;
                 for (int i = 0; i < players.Count; i++)
-                    if (players[i].hp < lowHp) { lowHp = players[i].hp; t = players[i]; }
+                {
+                    float sc = players[i].ThreatScore(0);
+                    if (sc > fallback) { fallback = sc; t = players[i]; }
+                }
             }
 
             if (t != null)

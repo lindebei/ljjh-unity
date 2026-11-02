@@ -88,6 +88,24 @@ namespace LingJing.Battle
             return equipped[k];
         }
 
+        /// <summary>是否是治疗者（上阵技能里有治疗）。敌方 AI 会优先咬这种人。</summary>
+        public bool isHealer;
+
+        /// <summary>
+        /// 敌方 AI 用的威胁分：治疗 &gt; 残血 &gt; 脆皮 &gt; 已经被盯上的人（集火补刀）。
+        /// 以前是「平铺挑血最少」，4 只怪各打各的，治疗永远死不了——这才是二元断崖的根。
+        /// </summary>
+        public float ThreatScore(int focusCount)
+        {
+            float score = 0f;
+            if (isHealer) score += 35f;
+            score += (1f - HpPercent) * 70f;                 // 血越少越优先
+            float def = Mathf.Max(1f, EffectiveDef);
+            score += Mathf.Clamp01(1f - def / 260f) * 35f;    // 防御越低越优先（脆皮）
+            score += focusCount * 20f;                        // 已经有人盯着 → 继续压，容易打死
+            return score;
+        }
+
         /// <summary>掉落是否已经掷过（同一只怪只掷一次）。</summary>
         public bool lootRolled;
 

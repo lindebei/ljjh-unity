@@ -73,9 +73,10 @@ public static class PlaytestFixCheck
             SkillTargeting.EffectiveSide(buff2),
             SkillTargeting.EffectiveSide(buff2) == TargetSide.Ally ? "PASS" : "FAIL"));
         var shield2 = BattleDatabase.GetSkill("e_support");
-        log.AppendLine(string.Format("⑥ 磐石（自盾+嘲讽）→ 按 {0}  {1}",
+        // 磐石 2026-11-02 从「只能自保」改成「可选友方」，嘲讽仍挂施法者（⑩ 里验）
+        log.AppendLine(string.Format("⑥ 磐石（护盾可选友方 + 嘲讽自己）→ 按 {0}  {1}",
             SkillTargeting.EffectiveSide(shield2),
-            SkillTargeting.EffectiveSide(shield2) == TargetSide.Self ? "PASS" : "FAIL"));
+            SkillTargeting.EffectiveSide(shield2) == TargetSide.Ally ? "PASS" : "FAIL"));
         // ---- ⑦ 减益辅助：潮噬（HealDown）打到敌人 ----
         var sim3 = new BattleSimulator(cfg, 7);
         for (int i = 0; i < 3; i++) sim3.AddPlayer(BattleDatabase.GetCreature(i == 0 ? "beast_water" : (i == 1 ? "beast_fire" : "beast_wind")), 24, new[] { 23, 23, 23, 23, 23, 23 });
