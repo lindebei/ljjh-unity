@@ -1648,6 +1648,8 @@ namespace LingJing.UI
                 case StatusType.HealMark: return "st_heal";
                 case StatusType.Burn: return "st_burn";
                 case StatusType.Poison: return "st_poison";
+                case StatusType.Stun: return "st_stun";
+                case StatusType.HealDown: return "st_healdown";
                 default: return null;
             }
         }
