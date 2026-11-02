@@ -108,6 +108,14 @@ namespace LingJing.Data
 
         [Range(0f, 1f)] public float enemyHealDownChance = 0.45f;
         public int enemyHealDownRounds = 2;
+
+        [Header("Boss 破治疗")]
+        [Range(0f, 1f)] public float bossHealDownChance = 1.0f;   // Boss 命中时挂「减疗」的概率
+        public int bossHealDownRounds = 3;
+        public bool bossHealDownAlwaysOnHealer = true;            // 打治疗者时无视概率，必上减疗
+        [Range(0f, 1f)] public float bossTrueDamagePercent = 0.5f; // Boss 奥义的真伤比例（比精英更高）
+        public float bossHpExtraScale = 1.15f;                    // Boss 额外血量系数：把战斗拉长，减疗才有窗口
+        public bool potionAffectedByHealDown = true;              // 药品也算「治疗」，被减疗压一半
         public float[] qualityHpScale = { 1f, 2.15f, 2.30f, 2.70f, 3.10f };
         public float[] qualityAtkScale = { 1f, 2.15f, 2.30f, 2.70f, 3.10f };
 

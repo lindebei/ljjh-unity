@@ -300,6 +300,10 @@ public static class BattleCsvImporter
             cfg.ultCooldownRounds = GetInt(map, "ultCooldownRounds", cfg.ultCooldownRounds);
             cfg.qualityHpScale = GetFloatArray(Get(map, "qualityHpScale"), cfg.qualityHpScale);
             cfg.qualityAtkScale = GetFloatArray(Get(map, "qualityAtkScale"), cfg.qualityAtkScale);
+            cfg.bossHealDownChance = GetFloat(map, "bossHealDownChance", cfg.bossHealDownChance);
+            cfg.bossHealDownRounds = GetInt(map, "bossHealDownRounds", cfg.bossHealDownRounds);
+            cfg.bossTrueDamagePercent = GetFloat(map, "bossTrueDamagePercent", cfg.bossTrueDamagePercent);
+            cfg.bossHpExtraScale = GetFloat(map, "bossHpExtraScale", cfg.bossHpExtraScale);
         cfg.timeCapSeconds = GetFloat(map, "timeCapSeconds", cfg.timeCapSeconds);
         cfg.enemyPowerScale = GetFloat(map, "enemyPowerScale", cfg.enemyPowerScale);
         if (map.ContainsKey("qualityPowerScale"))

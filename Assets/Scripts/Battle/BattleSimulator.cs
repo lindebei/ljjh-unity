@@ -143,6 +143,7 @@ namespace LingJing.Battle
             float waveDecay = (waveIndex > 0 && config.wavePowerDecay > 0f && config.wavePowerDecay < 1f)
                 ? Mathf.Pow(config.wavePowerDecay, waveIndex) : 1f;
             float hpMul = config.qualityHpMul[qi] * config.levelBandHpMul[bandIndex] * config.enemyPowerScale * qHp * waveDecay;
+            if (qi >= (int)Quality.MiniBoss && config.bossHpExtraScale > 0f) hpMul *= config.bossHpExtraScale;
             float atkMul = config.qualityAtkMul[qi] * config.levelBandAtkMul[bandIndex] * config.enemyPowerScale * qAtk * waveDecay;
 
             var u = new BattleUnit
@@ -654,7 +655,9 @@ namespace LingJing.Battle
             if (target == null) return false;
 
             potions--;
-            float healed = target.Heal(target.maxHp * config.potionHealPercent);
+            float amount = target.maxHp * config.potionHealPercent;
+            if (config.potionAffectedByHealDown && target.HasStatus(StatusType.HealDown)) amount *= 0.5f;   // 被减疗时药品也减半
+            float healed = target.Heal(amount);
             Log(string.Format("{0} 用药品：{1} 回 {2:F0}（剩 {3} 个）", actor.displayName, target.displayName, healed, potions));
             return true;
         }
@@ -988,8 +991,12 @@ namespace LingJing.Battle
 
                     float mul = skill.multiplier * scale * LingJing.Data.SkillRanks.MultiplierMul(skill);
                     // 敌人奥义里有一部分是真伤：不吃防御减伤、不吃护盾。用来打穿「治疗 + 护盾」的续航。
-                    float trueRatio = (actor.side == Side.Enemy && skill.type == SkillType.Ultimate)
-                        ? Mathf.Clamp01(config.enemyTrueDamagePercent) : 0f;
+                    float trueRatio = 0f;
+                    if (actor.side == Side.Enemy && skill.type == SkillType.Ultimate)
+                    {
+                        trueRatio = Mathf.Clamp01(actor.quality >= Quality.MiniBoss
+                            ? config.bossTrueDamagePercent : config.enemyTrueDamagePercent);
+                    }
                     int seg = Mathf.Max(1, skill.segments);
 
                     // 单段技能：伤害要落到「每一个目标」上（全体技能以前只打了第一个敌人，试玩里被抓出来）
@@ -1029,6 +1036,31 @@ namespace LingJing.Battle
                 }
             }
 
+        /// <summary>敌方「破治疗」：精英按概率、Boss 必中治疗者，命中后给目标叠减疗。</summary>
+        void ApplyEnemyHealDown(BattleUnit actor, SkillDefinition skill, List<BattleUnit> targets)
+        {
+            if (actor == null || actor.side != Side.Enemy) return;
+            if (actor.quality < Quality.Elite) return;
+            if (skill == null || (skill.multiplier <= 0f && !skill.isHeal)) return;
+
+            bool boss = actor.quality >= Quality.MiniBoss;
+            float chance = boss ? config.bossHealDownChance : config.enemyHealDownChance;
+            int rounds = Mathf.Max(1, boss ? config.bossHealDownRounds : config.enemyHealDownRounds);
+            if (chance <= 0f && !boss) return;
+
+            // 全体技能打的是全队；单体/多目标就是挑中的那几个
+            var hit = SkillTargeting.EffectiveSide(skill) == TargetSide.AllEnemies ? Alive(Side.Player) : targets;
+            for (int i = 0; i < hit.Count; i++)
+            {
+                var t = hit[i];
+                if (t == null || !t.IsAlive) continue;
+                bool force = boss && config.bossHealDownAlwaysOnHealer && t.isHealer;
+                if (!force && (chance <= 0f || rng.NextDouble() > chance)) continue;
+                t.ApplyStatus(StatusType.HealDown, 1, rounds, 0f, 99);
+                Log(string.Format("{0} 压制 {1}：治疗量 −50%（{2} 回合）", actor.displayName, t.displayName, rounds));
+            }
+        }
+
         /// <summary>控制类效果：按 controlChance 掷一次，命中就给目标挂眩晕（controlDuration 回合）。</summary>
         void TryApplyControl(BattleUnit actor, SkillDefinition skill, BattleUnit target)
         {
@@ -1038,6 +1070,9 @@ namespace LingJing.Battle
             target.ApplyStatus(StatusType.Stun, 1, skill.controlDuration, 0f, 99);
             Log(string.Format("{0} 被 {1} 眩晕 {2} 回合", target.displayName, skill.displayName, skill.controlDuration));
         }
+
+            // 敌方破治疗：必须在伤害段之后（要先判定命中目标是否活着）
+            if (actor.side == Side.Enemy) ApplyEnemyHealDown(actor, skill, targets);
 
             // 纯减益辅助（没有伤害倍率）：状态要自己挂，不能指望伤害段顺手挂上
             if (skill.appliedStatus != StatusType.None && skill.dotStacks > 0 && skill.multiplier <= 0f)
