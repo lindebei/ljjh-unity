@@ -54,6 +54,13 @@ public static class BattleAutoShot
         Run();
     }
 
+    /// <summary>一境地图：截一张给人看视野（不做玩法校验）。</summary>
+    public static void RunRunMap()
+    {
+        ScenePath = "Assets/Scenes/RunMap.unity";
+        Run();
+    }
+
     public static void RunMenu()
     {
         ScenePath = "Assets/Scenes/MainMenu.unity";

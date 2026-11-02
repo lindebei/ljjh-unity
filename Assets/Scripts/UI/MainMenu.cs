@@ -12,6 +12,7 @@ namespace LingJing.UI
     {
         public const string BattleScene = "BattlePrototype";
         public const string EquipScene = "EquipScreen";
+        const string RunMapScene = "RunMap";
         public const string SkillScene = "SkillScreen";
         public const string BossScene = "BattleBoss";
 
@@ -54,12 +55,13 @@ namespace LingJing.UI
             Text(canvasRect, "SubTitle", "v0.1 · 战斗手感验证版", 28, new Color(0.72f, 0.78f, 0.88f), TextAnchor.MiddleCenter,
                 new Vector2(0.5f, 1f), new Vector2(1200f, 40f), new Vector2(0.5f, 1f), new Vector2(0f, -305f));
 
-            float y = 105f;
+            float y = 190f;
             Btn(canvasRect, "开始战斗（编队 4 选 3）", new Vector2(0f, y), () => Load(BattleScene));
             Btn(canvasRect, "换装", new Vector2(0f, y - 110f), () => Load(EquipScene));
             Btn(canvasRect, "技能", new Vector2(0f, y - 220f), () => Load(SkillScene));
             Btn(canvasRect, "Boss 演示战", new Vector2(0f, y - 330f), () => Load(BossScene));
-            Btn(canvasRect, "退出游戏", new Vector2(0f, y - 440f), Quit);
+            Btn(canvasRect, "一境探索", new Vector2(0f, y - 440f), () => { LingJing.Battle.RunState.Reset(); Load(RunMapScene); });
+            Btn(canvasRect, "退出游戏", new Vector2(0f, y - 550f), Quit);
 
             Text(canvasRect, "Hint", "点「开始战斗」后先选 3 只兽，开战后编队不可更改", 22,
                 new Color(0.6f, 0.66f, 0.76f), TextAnchor.MiddleCenter,

@@ -26,5 +26,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/BattleBoss.unity
     guid: 9ad403c553688da43877f380116e46e0
+  - enabled: 1
+    path: Assets/Scenes/RunMap.unity
+    guid: 307f3453ae47c1d4dbe896b4cbb98efd
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

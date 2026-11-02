@@ -329,6 +329,14 @@ namespace LingJing.UI
 
         // ------------------------------------------------------------------ 开打
 
+        /// <summary>按品质随机挑一只敌人（探索模式的精英/首领节点用）。</summary>
+        static string PickEnemyId(Quality q)
+        {
+            var list = BattleDatabase.EnemiesOfQuality(q);
+            if (list == null || list.Count == 0) return "en_bonefish";
+            return list[UnityEngine.Random.Range(0, list.Count)].id;
+        }
+
         void StartBattle()
         {
             var cfg = BattleDatabase.Config;
@@ -337,7 +345,9 @@ namespace LingJing.UI
             sim = new BattleSimulator(cfg) { interactive = true, verbose = true };
             int[] free = { 23, 23, 23, 23, 23, 23 };
 
-            string[] players = picked.ToArray();
+            // 探索模式（RunState.Active）下队伍与残血来自地图；否则用编队面板选的 3 只
+            bool runMode = LingJing.Battle.RunState.Active;
+            string[] players = runMode ? LingJing.Battle.RunState.PartyIds.ToArray() : picked.ToArray();
             for (int i = 0; i < players.Length; i++)
             {
                 var def = BattleDatabase.GetCreature(players[i]);
@@ -360,10 +370,40 @@ namespace LingJing.UI
 
                 // 上阵技能：技能界面存了什么就带什么；一格都没配就按等级自动装满 4 格
                 var equipped = LingJing.Data.SkillLoadout.Resolve(def, playerLevel);
-                sim.AddPlayer(def, playerLevel, free, gear, equipped);
+                var unit = sim.AddPlayer(def, playerLevel, free, gear, equipped);
+                if (runMode)
+                {
+                    float pct = (i < LingJing.Battle.RunState.HpPct.Count) ? LingJing.Battle.RunState.HpPct[i] : 1f;
+                    unit.hp = Mathf.Max(1f, unit.maxHp * Mathf.Clamp(pct, 0.05f, 1f));   // 残血继承，但至少留 5%
+                }
             }
 
-            if (useRandomEncounter)
+            if (runMode)
+            {
+                // 节点类型决定遭遇：普通=生成器；精英=1 精英+1 普通；首领=1 小 Boss
+                var kind = LingJing.Battle.RunState.PendingNode;
+                int b0 = cfg.BandIndex(enemyLevel);
+                if (kind == "elite")
+                {
+                    AddEnemyWave(b0, new[] { PickEnemyId(Quality.Elite), PickEnemyId(Quality.Normal) });
+                    lastEncounterText = "精英遭遇";
+                }
+                else if (kind == "boss")
+                {
+                    AddEnemyWave(b0, new[] { PickEnemyId(Quality.MiniBoss) });
+                    lastEncounterText = "首领遭遇";
+                }
+                else
+                {
+                    var rng2 = new System.Random(LingJing.Battle.RunState.Floor * 7919 + 13);
+                    var enc = EncounterGenerator.Roll(playerLevel, cfg.BandIndex(playerLevel), rng2);
+                    enemyLevel = enc.level;
+                    for (int w = 0; w < enc.waves.Count; w++) AddEnemyWave(cfg.BandIndex(enc.level), enc.waves[w]);
+                    lastEncounterText = EncounterGenerator.Describe(enc);
+                }
+                Debug.Log("[BattleHud] 探索第 " + LingJing.Battle.RunState.Floor + " 层：" + lastEncounterText);
+            }
+            else if (useRandomEncounter)
             {
                 int seed = encounterSeed != 0 ? encounterSeed : System.Environment.TickCount;
                 var rng = new System.Random(seed);
@@ -1253,10 +1293,27 @@ namespace LingJing.UI
             popCount = 0;
         }
 
+        /// <summary>探索模式结算：把血量/掉落写回 RunState；赢了层数 +1。</summary>
+        void CaptureRunIfAny(bool victory)
+        {
+            if (!LingJing.Battle.RunState.Active || sim == null) return;
+            var players = new System.Collections.Generic.List<BattleUnit>();
+            for (int i = 0; i < sim.units.Count; i++)
+                if (sim.units[i].side == Side.Player) players.Add(sim.units[i]);
+            LingJing.Battle.RunState.Capture(players, victory, sim.loot);
+        }
+
+        void BackToRunMap()
+        {
+            if (Application.CanStreamedLevelBeLoaded("RunMap")) UnityEngine.SceneManagement.SceneManager.LoadScene("RunMap");
+            else BackToMenu();
+        }
+
         void ShowFinish()
         {
             ClearFloatingNumbers();
             bool win = sim.Alive(Side.Enemy).Count == 0;
+            CaptureRunIfAny(win);      // 探索模式：血量/掉落/层数写回地图状态
             ClearButtons(); // 先清按钮（它会把横幅清空），再写结果文字，别反了
             statusBanner.text = win ? "战斗结束：胜利" : "战斗结束：失败";
             statusBanner.color = win ? new Color(0.6f, 1f, 0.6f) : new Color(1f, 0.5f, 0.5f);
@@ -1302,6 +1359,13 @@ namespace LingJing.UI
 
                 menuBackButton.onClick.AddListener(BackToMenu);
             }
+            // 探索模式下按钮改成「回地图」，点了回 RunMap 继续下一层
+            bool runMode = LingJing.Battle.RunState.Active;
+            var label = menuBackButton.GetComponentInChildren<Text>();
+            if (label != null) label.text = runMode ? "回地图" : "回主菜单";
+            menuBackButton.onClick.RemoveAllListeners();
+            if (runMode) menuBackButton.onClick.AddListener(BackToRunMap);
+            else menuBackButton.onClick.AddListener(BackToMenu);
             menuBackButton.gameObject.SetActive(true);
         }
 
