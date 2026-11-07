@@ -179,7 +179,7 @@ public static class BattleSceneBuilder
         EditorBuildSettings.scenes = scenes.ToArray();
     }
 
-        [MenuItem("灵境/生成 Explore 场景（一境地图）")]
+    [MenuItem("灵境/生成 Explore 场景（一境地图）")]
     public static void BuildExploreScene()
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -198,6 +198,42 @@ public static class BattleSceneBuilder
         const string path = "Assets/Scenes/Explore.unity";
         EditorSceneManager.SaveScene(scene, path);
         AddToBuildSettings(path);
+        Debug.Log("[BattleSceneBuilder] 场景已生成：" + path);
+    }
+
+    /// <summary>营地图：游戏真正的第一屏（三兽站位 + 整备入口 + 出发）。</summary>
+    [MenuItem("灵境/生成 Camp 场景（营地）")]
+    public static void BuildCampScene()
+    {
+        var scene = UnityEditor.SceneManagement.EditorSceneManager.NewScene(
+            UnityEditor.SceneManagement.NewSceneSetup.EmptyScene,
+            UnityEditor.SceneManagement.NewSceneMode.Single);
+
+        var camGo = new GameObject("Main Camera");
+        var cam = camGo.AddComponent<Camera>();
+        cam.orthographic = true;
+        cam.clearFlags = CameraClearFlags.SolidColor;
+        cam.backgroundColor = new Color(0.94f, 0.91f, 0.84f);
+        camGo.transform.position = new Vector3(0f, 0f, -10f);
+
+        var runner = new GameObject("CampRunner");
+        runner.AddComponent<LingJing.UI.CampScreen>();
+
+        const string path = "Assets/Scenes/Camp.unity";
+        UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene, path);
+
+        // 营地图要排 Build Settings 第 0 位：正式构建时启动即进营地。
+        // 已有 AddToBuildSettings(path) 会插到 0，但若该路径已在列表里它会提前 return，所以这里再显式挪一次。
+        AddToBuildSettings(path);
+        var list = new System.Collections.Generic.List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+        int at = list.FindIndex(x => x.path == path);
+        if (at > 0)
+        {
+            var item = list[at];
+            list.RemoveAt(at);
+            list.Insert(0, item);
+            EditorBuildSettings.scenes = list.ToArray();
+        }
         Debug.Log("[BattleSceneBuilder] 场景已生成：" + path);
     }
 
