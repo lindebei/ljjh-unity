@@ -395,10 +395,20 @@ namespace LingJing.UI
                     else
                     {
                         var zone = LingJing.Battle.WorldMap.ZoneById(LingJing.Battle.RunState.PendingZone);
-                        var rngW = new System.Random(System.Environment.TickCount);
-                        var list = LingJing.Battle.WorldMap.RollEnemies(zone, lv, rngW);
-                        ids = list.ToArray();
+                        // 地图上弹「战斗/逃离」时就已经把敌人掷好了，这里直接用那一批，
+                        // 否则玩家看到的提示和真正打的怪会对不上。
+                        string frozen = LingJing.Battle.RunState.PendingEnemyIds;
+                        if (!string.IsNullOrEmpty(frozen))
+                        {
+                            ids = frozen.Split(',');
+                        }
+                        else
+                        {
+                            var rngW = new System.Random(System.Environment.TickCount);
+                            ids = LingJing.Battle.WorldMap.RollEnemies(zone, lv, rngW).ToArray();
+                        }
                         lastEncounterText = (zone != null ? zone.displayName : "浅滩") + " · Lv" + lv + " · " + ids.Length + " 只";
+                        LingJing.Battle.RunState.PendingEnemyIds = "";
                     }
                     if (kind.StartsWith("boss_")) lastEncounterText = "首领遭遇 · Lv" + lv;
                     if (ids.Length > 0) AddEnemyWave(b0, ids);

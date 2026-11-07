@@ -28,6 +28,13 @@ namespace LingJing.UI
         Text zoneText, statText, tipText, logText;
         Button challengeButton;
         GameObject challengePanel;
+        GameObject encounterPanel;
+        GameObject encDim;
+        Text encounterTitle;
+        Text encounterBody;
+        string encZoneId = "";
+        int encLevel;
+        readonly System.Collections.Generic.List<string> encEnemyIds = new System.Collections.Generic.List<string>();
         string challengeBoss;
         int challengeLevel;
 
@@ -225,6 +232,36 @@ namespace LingJing.UI
             Btn(challengePanel.transform, "先不打", new Vector2(0f, -100f), new Vector2(220f, 62f), () => challengePanel.SetActive(false));
             challengePanel.SetActive(false);
 
+            // 遭遇提示面板：暗雷触发后先给「战斗 / 逃离」，不直接进战斗
+            encDim = new GameObject("EncDim", typeof(RectTransform)).gameObject;
+            var dimImg = encDim.AddComponent<Image>();
+            dimImg.color = new Color(0f, 0f, 0f, 0.62f);   // 压暗背景，面板文字才读得清
+            var dimRt = dimImg.rectTransform;
+            dimRt.SetParent(canvasGo.transform, false);
+            dimRt.anchorMin = Vector2.zero;
+            dimRt.anchorMax = Vector2.one;
+            dimRt.offsetMin = Vector2.zero;
+            dimRt.offsetMax = Vector2.zero;
+            encDim.SetActive(false);
+
+            encounterPanel = new GameObject("Encounter", typeof(RectTransform)).gameObject;
+            var ep = encounterPanel.AddComponent<Image>();
+            ep.color = new Color(0.10f, 0.12f, 0.16f, 1f);
+            var epr = ep.rectTransform;
+            epr.SetParent(canvasGo.transform, false);
+            epr.anchorMin = new Vector2(0.5f, 0.5f);
+            epr.anchorMax = new Vector2(0.5f, 0.5f);
+            epr.pivot = new Vector2(0.5f, 0.5f);
+            epr.sizeDelta = new Vector2(560f, 300f);
+            epr.anchoredPosition = Vector2.zero;
+            encounterTitle = Text(encounterPanel.transform, "ETitle", "", 30, new Color(1f, 0.86f, 0.55f), TextAnchor.MiddleCenter,
+                new Vector2(0.5f, 1f), new Vector2(520f, 60f), new Vector2(0.5f, 1f), new Vector2(0f, -50f));
+            encounterBody = Text(encounterPanel.transform, "EBody", "", 22, new Color(0.82f, 0.88f, 0.95f), TextAnchor.UpperCenter,
+                new Vector2(0.5f, 1f), new Vector2(500f, 90f), new Vector2(0.5f, 1f), new Vector2(0f, -108f));
+            Btn(encounterPanel.transform, "战斗", new Vector2(-120f, -100f), new Vector2(200f, 74f), StartEncounterBattle);
+            Btn(encounterPanel.transform, "逃离", new Vector2(120f, -100f), new Vector2(200f, 74f), FleeEncounter);
+            ShowEncounter(false);
+
             // 底部按钮
             Btn(canvasGo.transform, "回主菜单", new Vector2(-820f, 46f), new Vector2(220f, 64f), () => SceneManager.LoadScene("MainMenu"));
         }
@@ -255,6 +292,7 @@ namespace LingJing.UI
         void Update()
         {
             if (challengePanel != null && challengePanel.activeSelf) return;
+            if (encounterPanel != null && encounterPanel.activeSelf) return;
 
             Vector2 dir = Vector2.zero;
             var kb = UnityEngine.InputSystem.Keyboard.current;
@@ -350,13 +388,73 @@ namespace LingJing.UI
             if (rng.NextDouble() >= z.ratePerMeter * moved) return;
 
             int level = WorldMap.RollLevel(z, RunState.PlayerLevel, rng);
+            encZoneId = z.id;
+            encLevel = level;
+            encEnemyIds.Clear();
+            encEnemyIds.AddRange(WorldMap.RollEnemies(z, RunState.PlayerLevel, rng));
+
+            var names = new System.Collections.Generic.List<string>();
+            foreach (var id in encEnemyIds)
+            {
+                var def = BattleDatabase.GetCreature(id);
+                names.Add(def != null ? def.displayName : id);
+            }
+            encounterTitle.text = "遭遇！（" + z.displayName + " · Lv" + level + " · " + encEnemyIds.Count + " 只）";
+            encounterBody.text = string.Join("  ", names) + "\n打，还是退开？";
+            ShowEncounter(true);
+            AddLog("遭遇： " + z.displayName + " · Lv" + level + " · " + encEnemyIds.Count + " 只");
+        }
+
+        void StartEncounterBattle()
+        {
+            if (encEnemyIds.Count == 0) { ShowEncounter(false); return; }
             RunState.PendingNode = "wild";
-            RunState.PendingZone = z.id;
-            RunState.PendingLevel = level;
+            RunState.PendingZone = encZoneId;
+            RunState.PendingLevel = encLevel;
+            RunState.PendingEnemyIds = string.Join(",", encEnemyIds);
             RunState.Save();
             encounterCount++;
-            AddLog("遭遇！" + z.displayName + " · Lv" + level);
+            ShowEncounter(false);
             SceneManager.LoadScene(BattleScene);
+        }
+
+        /// <summary>逃离：不进战斗，但给 8 秒冷却并往后退 12 米 —— 否则站着反复点「战斗/逃离」就能刷掉遇敌。</summary>
+        void FleeEncounter()
+        {
+            encEnemyIds.Clear();
+            RunState.PendingEnemyIds = "";
+            ShowEncounter(false);
+            cooldown = CooldownSeconds;
+            metersSinceBattle = 0f;
+            ShowTip("逃离：8 秒内不会再有遭遇");
+            AddLog("你退开了，暂时不会再遇敌");
+        }
+
+        void ShowEncounter(bool on)
+        {
+            if (encounterPanel != null) encounterPanel.SetActive(on);
+            if (encDim != null) encDim.SetActive(on);
+        }
+
+        /// <summary>给截图 / 手工验证用：就地伪造一次遭遇，把提示面板弹出来。</summary>
+        public void DebugShowEncounter()
+        {
+            var z = WorldMap.ZoneAt(pos.x, pos.y);
+            if (z == null) z = WorldMap.ZoneAt(300f, 500f);
+            if (z == null) return;
+            encZoneId = z.id;
+            encLevel = WorldMap.RollLevel(z, RunState.PlayerLevel, rng);
+            encEnemyIds.Clear();
+            encEnemyIds.AddRange(WorldMap.RollEnemies(z, RunState.PlayerLevel, rng));
+            var names = new System.Collections.Generic.List<string>();
+            foreach (var id in encEnemyIds)
+            {
+                var def = BattleDatabase.GetCreature(id);
+                names.Add(def != null ? def.displayName : id);
+            }
+            encounterTitle.text = "遭遇！（" + z.displayName + " · Lv" + encLevel + " · " + encEnemyIds.Count + " 只）";
+            encounterBody.text = string.Join("  ", names) + "\n打，还是退开？";
+            ShowEncounter(true);
         }
 
         void RevealFog()

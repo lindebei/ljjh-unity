@@ -19,6 +19,8 @@ namespace LingJing.Battle
 
         /// <summary>待战遭遇的生态区 id（暗雷遇敌时写进来）。</summary>
         public static string PendingZone = "";
+        /// <summary>遭遇提示时就冻结下来的敌人 id（逗号分隔）；逃离时清空。</summary>
+        public static string PendingEnemyIds = "";
         /// <summary>待战遭遇的怪物等级。</summary>
         public static int PendingLevel = 24;
         /// <summary>队伍等级（三兽统一，一境先按同一级处理）。</summary>

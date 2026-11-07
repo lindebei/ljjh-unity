@@ -12,6 +12,7 @@ public static class ExploreShot
     const string FrameKey = "ljjh.exploreshot.frame";
     const string OutDir = "D:/ljjh/tmp/shots";
     const string Scene = "Assets/Scenes/Explore.unity";
+    const string EncKey = "ljjh.exploreshot.encounter";
 
     public static void Run()
     {
@@ -41,10 +42,16 @@ public static class ExploreShot
         switch (phase)
         {
             case 0:
+                if (frame == 60 && EditorPrefs.GetBool(EncKey, false))
+                {
+                    var hud = Object.FindObjectOfType<LingJing.UI.ExploreScreen>();
+                    if (hud != null) hud.DebugShowEncounter();
+                }
                 if (frame >= 90)
                 {
-                    ScreenCapture.CaptureScreenshot(OutDir + "/explore_01.png");
-                    Debug.Log("[ExploreShot] 截图 explore_01.png");
+                    var file = EditorPrefs.GetBool(EncKey, false) ? "/explore_encounter.png" : "/explore_01.png";
+                    ScreenCapture.CaptureScreenshot(OutDir + file);
+                    Debug.Log("[ExploreShot] 截图完成");
                     EditorPrefs.SetInt(PhaseKey, 1);
                     EditorPrefs.SetInt(FrameKey, 0);
                 }
