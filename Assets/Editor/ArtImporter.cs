@@ -16,8 +16,9 @@ public static class ArtImporter
         int portraits = ImportDir("Assets/Resources/Art/Creatures", 512);
         int skills = ImportDir("Assets/Resources/Art/Icons/Skills", 256);
         int status = ImportDir("Assets/Resources/Art/Icons/Status", 256);
-        Debug.Log(string.Format("[ArtImporter] 导入完成：立绘 {0} 张、技能图标 {1} 张、状态图标 {2} 张",
-            portraits, skills, status));
+        int ui = ImportDir("Assets/Resources/Art/UI", 1024);
+        Debug.Log(string.Format("[ArtImporter] 导入完成：立绘 {0} 张、技能图标 {1} 张、状态图标 {2} 张、UI 皮肤 {3} 张",
+            portraits, skills, status, ui));
     }
 
     static int ImportDir(string dir, int maxSize)

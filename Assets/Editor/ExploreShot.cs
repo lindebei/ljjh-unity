@@ -14,6 +14,20 @@ public static class ExploreShot
     const string Scene = "Assets/Scenes/Explore.unity";
     const string EncKey = "ljjh.exploreshot.encounter";
 
+    /// <summary>只截地图（关掉遭遇面板开关）。</summary>
+    public static void RunMap()
+    {
+        EditorPrefs.SetBool(EncKey, false);
+        Run();
+    }
+
+    /// <summary>只截遭遇面板（打开开关）。</summary>
+    public static void RunEncounter()
+    {
+        EditorPrefs.SetBool(EncKey, true);
+        Run();
+    }
+
     public static void Run()
     {
         Directory.CreateDirectory(OutDir);

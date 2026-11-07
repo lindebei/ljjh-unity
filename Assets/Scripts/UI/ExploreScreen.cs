@@ -104,14 +104,15 @@ namespace LingJing.UI
             mapRect.anchoredPosition = new Vector2(0f, -30f);
 
             // 底噪地貌：生态区之间是有空档的，没有这层底图就是一片纯黑
-            var baseTerrain = Panel(mapRect, "Terrain", new Color(0.10f, 0.13f, 0.16f));
+            var baseTerrain = Panel(mapRect, "Terrain", Color.white);
             Stretch(baseTerrain.rectTransform);
+            baseTerrain.sprite = Skin("map_terrain");
             baseTerrain.raycastTarget = false;
 
             // 100 米一格的淡网格，走路时有参照物
             for (int g = 1; g < 8; g++)
             {
-                var v = Panel(mapRect, "GridV" + g, new Color(1f, 1f, 1f, 0.05f));
+                var v = Panel(mapRect, "GridV" + g, new Color(0.42f, 0.36f, 0.28f, 0.16f));
                 var vrt = v.rectTransform;
                 vrt.anchorMin = new Vector2(0f, 0f);
                 vrt.anchorMax = new Vector2(0f, 1f);
@@ -119,7 +120,7 @@ namespace LingJing.UI
                 vrt.sizeDelta = new Vector2(1f, 0f);
                 vrt.anchoredPosition = new Vector2(g * 100f, 0f);
 
-                var hPanel = Panel(mapRect, "GridH" + g, new Color(1f, 1f, 1f, 0.05f));
+                var hPanel = Panel(mapRect, "GridH" + g, new Color(0.42f, 0.36f, 0.28f, 0.16f));
                 var hrt = hPanel.rectTransform;
                 hrt.anchorMin = new Vector2(0f, 0f);
                 hrt.anchorMax = new Vector2(1f, 0f);
@@ -134,7 +135,7 @@ namespace LingJing.UI
             {
                 var z = zones[i];
                 var c = ZoneColors[(int)z.Dominant()];
-                var cell = Panel(mapRect, "Zone_" + z.id, new Color(c.r, c.g, c.b, 0.85f));
+                var cell = Panel(mapRect, "Zone_" + z.id, new Color(c.r, c.g, c.b, 0.62f));
                 var rt = cell.rectTransform;
                 rt.anchorMin = new Vector2(0f, 0f);
                 rt.anchorMax = new Vector2(0f, 0f);
@@ -143,7 +144,7 @@ namespace LingJing.UI
                 rt.anchoredPosition = new Vector2(z.x, z.y);
 
                 Text(mapRect, "ZoneName_" + z.id, "<b>" + z.displayName + "</b>\n" + ElementWord(z.Dominant()) + "·Lv" + z.minLevel + "–" + z.maxLevel,
-                    22, new Color(1f, 0.96f, 0.86f, 0.92f), TextAnchor.MiddleCenter,
+                    22, new Color(0.19f, 0.16f, 0.13f, 0.95f), TextAnchor.MiddleCenter,
                     new Vector2(0f, 0f), new Vector2(Mathf.Max(140f, z.w * 0.6f), 60f),
                     new Vector2(0f, 0f), new Vector2(z.x + z.w * 0.5f, z.y + z.h * 0.5f));
             }
@@ -159,7 +160,7 @@ namespace LingJing.UI
                 rt.pivot = new Vector2(0.5f, 0.5f);
                 rt.sizeDelta = new Vector2(18f, 18f);
                 rt.anchoredPosition = sp;
-                Text(mapRect, "SupplyLbl" + i, i == 0 ? "据点" : "补给", 16, new Color(0.8f, 0.95f, 1f),
+                Text(mapRect, "SupplyLbl" + i, i == 0 ? "据点" : "补给", 16, new Color(0.25f, 0.22f, 0.18f),
                     TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(80f, 18f), new Vector2(0.5f, 0.5f), sp + new Vector2(0f, 24f));
             }
 
@@ -195,6 +196,16 @@ namespace LingJing.UI
             }
 
             // 玩家
+            // 外框最后画：盖在地图内容之上，做一圈墨线 + 金线
+            var frameImg = Panel(mapRect, "Frame", Color.white);
+            frameImg.sprite = Skin("map_frame");
+            frameImg.raycastTarget = false;
+            var frt = frameImg.rectTransform;
+            frt.anchorMin = frt.anchorMax = new Vector2(0.5f, 0.5f);
+            frt.pivot = new Vector2(0.5f, 0.5f);
+            frt.sizeDelta = new Vector2(WorldMap.Size + 40f, WorldMap.Size + 40f);
+            frt.anchoredPosition = Vector2.zero;
+
             var pawnGo = Panel(mapRect, "Player", new Color(1f, 0.95f, 0.55f));
             pawn = pawnGo.rectTransform;
             pawn.anchorMin = new Vector2(0f, 0f);
@@ -203,7 +214,7 @@ namespace LingJing.UI
             pawn.sizeDelta = new Vector2(16f, 16f);
 
             // 顶栏
-            zoneText = Text(canvasGo.transform, "Zone", "", 30, new Color(1f, 0.94f, 0.78f), TextAnchor.MiddleLeft,
+            zoneText = Text(canvasGo.transform, "Zone", "", 30, new Color(0.93f, 0.90f, 0.82f), TextAnchor.MiddleLeft,
                 new Vector2(0f, 1f), new Vector2(900f, 44f), new Vector2(0f, 1f), new Vector2(70f, -46f));
             statText = Text(canvasGo.transform, "Stat", "", 24, new Color(0.82f, 0.88f, 0.95f), TextAnchor.MiddleRight,
                 new Vector2(1f, 1f), new Vector2(900f, 44f), new Vector2(1f, 1f), new Vector2(-70f, -46f));
@@ -211,7 +222,7 @@ namespace LingJing.UI
             logText = Text(canvasGo.transform, "Log", "", 20, new Color(0.75f, 0.82f, 0.9f), TextAnchor.UpperLeft,
                 new Vector2(0f, 1f), new Vector2(620f, 260f), new Vector2(0f, 1f), new Vector2(70f, -110f));
 
-            tipText = Text(canvasGo.transform, "Tip", "", 26, new Color(1f, 0.9f, 0.6f), TextAnchor.MiddleCenter,
+            tipText = Text(canvasGo.transform, "Tip", "", 26, new Color(0.22f, 0.17f, 0.12f), TextAnchor.MiddleCenter,
                 new Vector2(0.5f, 0f), new Vector2(1400f, 50f), new Vector2(0.5f, 0f), new Vector2(0f, 86f));
             tipText.text = "WASD / 方向键 走动 · 走近 Boss 光柱可挑战 · 踩补给点回满并存档";
 
@@ -246,7 +257,8 @@ namespace LingJing.UI
 
             encounterPanel = new GameObject("Encounter", typeof(RectTransform)).gameObject;
             var ep = encounterPanel.AddComponent<Image>();
-            ep.color = new Color(0.10f, 0.12f, 0.16f, 1f);
+            ep.color = Color.white;
+            ep.sprite = Skin("panel_dialog");
             var epr = ep.rectTransform;
             epr.SetParent(canvasGo.transform, false);
             epr.anchorMin = new Vector2(0.5f, 0.5f);
@@ -254,9 +266,9 @@ namespace LingJing.UI
             epr.pivot = new Vector2(0.5f, 0.5f);
             epr.sizeDelta = new Vector2(560f, 300f);
             epr.anchoredPosition = Vector2.zero;
-            encounterTitle = Text(encounterPanel.transform, "ETitle", "", 30, new Color(1f, 0.86f, 0.55f), TextAnchor.MiddleCenter,
+            encounterTitle = Text(encounterPanel.transform, "ETitle", "", 30, new Color(0.55f, 0.16f, 0.12f), TextAnchor.MiddleCenter,
                 new Vector2(0.5f, 1f), new Vector2(520f, 60f), new Vector2(0.5f, 1f), new Vector2(0f, -50f));
-            encounterBody = Text(encounterPanel.transform, "EBody", "", 22, new Color(0.82f, 0.88f, 0.95f), TextAnchor.UpperCenter,
+            encounterBody = Text(encounterPanel.transform, "EBody", "", 22, new Color(0.20f, 0.17f, 0.14f), TextAnchor.UpperCenter,
                 new Vector2(0.5f, 1f), new Vector2(500f, 90f), new Vector2(0.5f, 1f), new Vector2(0f, -108f));
             Btn(encounterPanel.transform, "战斗", new Vector2(-120f, -100f), new Vector2(200f, 74f), StartEncounterBattle);
             Btn(encounterPanel.transform, "逃离", new Vector2(120f, -100f), new Vector2(200f, 74f), FleeEncounter);
@@ -284,7 +296,7 @@ namespace LingJing.UI
             crt.sizeDelta = new Vector2(20f, 20f);
             crt.anchoredPosition = at;
 
-            Text(mapRect, "BossLbl_" + nodeId, label, 18, color, TextAnchor.MiddleCenter,
+            Text(mapRect, "BossLbl_" + nodeId, label, 18, Color.Lerp(color, new Color(0.25f, 0.18f, 0.14f), 0.55f), TextAnchor.MiddleCenter,
                 new Vector2(0f, 0f), new Vector2(160f, 22f), new Vector2(0.5f, 0.5f), at + new Vector2(0f, 134f));
         }
 
@@ -457,6 +469,12 @@ namespace LingJing.UI
             ShowEncounter(true);
         }
 
+        /// <summary>读 UI 皮肤；没导入就返回 null（退化成纯色，界面不会崩）。</summary>
+        static Sprite Skin(string name)
+        {
+            return Resources.Load<Sprite>("Art/UI/" + name);
+        }
+
         void RevealFog()
         {
             int cx = Mathf.FloorToInt(pos.x / FogCell);
@@ -567,7 +585,14 @@ namespace LingJing.UI
             var go = new GameObject("Btn_" + label, typeof(Image), typeof(Button));
             go.transform.SetParent(parent, false);
             var img = go.GetComponent<Image>();
-            img.color = new Color(0.24f, 0.31f, 0.42f);
+            var skin = Skin("btn_small");
+            if (skin != null)
+            {
+                img.sprite = skin;
+                img.type = Image.Type.Sliced;   // 九宫格拉伸，任意尺寸都不变形
+                img.color = Color.white;
+            }
+            else img.color = new Color(0.24f, 0.31f, 0.42f);   // 没皮肤时退回纯色
             var btn = go.GetComponent<Button>();
             btn.targetGraphic = img;
             var cb = btn.colors;
@@ -586,7 +611,9 @@ namespace LingJing.UI
             rt.sizeDelta = size;
             rt.anchoredPosition = position;
 
-            var t = Text(go.transform, "Label", label, 24, Color.white, TextAnchor.MiddleCenter,
+            // 纸底按钮 → 墨色字；没皮肤时保持白字（深色底）
+            var labelColor = Skin("btn_small") != null ? new Color(0.18f, 0.15f, 0.12f) : Color.white;
+            var t = Text(go.transform, "Label", label, 24, labelColor, TextAnchor.MiddleCenter,
                 new Vector2(0.5f, 0.5f), size, new Vector2(0.5f, 0.5f), Vector2.zero);
             Stretch(t.rectTransform);
             return btn;
