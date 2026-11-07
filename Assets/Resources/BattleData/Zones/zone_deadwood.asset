@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76bf560b185f2474788b974d31e28601, type: 3}
+  m_Name: zone_deadwood
+  m_EditorClassIdentifier: Assembly-CSharp::LingJing.Data.ZoneDefinition
+  id: zone_deadwood
+  displayName: "\u67AF\u6797"
+  x: 600
+  y: 60
+  w: 200
+  h: 700
+  ratePerMeter: 0.006
+  minLevel: 6
+  maxLevel: 14
+  water: 25
+  fire: 15
+  wind: 30
+  earth: 40
+  gateLevel: 0
+  note: "\u89C6\u7EBF\u5DEE\uFF0C\u7CBE\u82F1\u6BD4\u4F8B\u9AD8"

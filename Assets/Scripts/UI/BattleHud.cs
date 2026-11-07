@@ -349,6 +349,7 @@ namespace LingJing.UI
             // 探索模式（RunState.Active）下队伍与残血来自地图；否则用编队面板选的 3 只
             bool runMode = LingJing.Battle.RunState.Active;
             string[] players = runMode ? LingJing.Battle.RunState.PartyIds.ToArray() : picked.ToArray();
+            int playerLevel = runMode ? LingJing.Battle.RunState.PlayerLevel : this.playerLevel;   // 探索模式等级跟地图走
             for (int i = 0; i < players.Length; i++)
             {
                 var def = BattleDatabase.GetCreature(players[i]);
@@ -383,7 +384,26 @@ namespace LingJing.UI
             {
                 // 节点类型决定遭遇：普通=生成器；精英=1 精英+1 普通；首领=1 小 Boss
                 var kind = LingJing.Battle.RunState.PendingNode;
-                int b0 = cfg.BandIndex(enemyLevel);
+                int b0 = cfg.BandIndex(LingJing.Battle.RunState.PendingLevel);
+                if (kind == "wild" || kind.StartsWith("boss_"))
+                {
+                    int lv = LingJing.Battle.RunState.PendingLevel;
+                    string[] ids;
+                    if (kind == "boss_mini") ids = new[] { "en_jelly" };
+                    else if (kind == "boss_mid") ids = new[] { "en_tigerking" };
+                    else if (kind == "boss_big") ids = new[] { "en_snake" };
+                    else
+                    {
+                        var zone = LingJing.Battle.WorldMap.ZoneById(LingJing.Battle.RunState.PendingZone);
+                        var rngW = new System.Random(System.Environment.TickCount);
+                        var list = LingJing.Battle.WorldMap.RollEnemies(zone, lv, rngW);
+                        ids = list.ToArray();
+                        lastEncounterText = (zone != null ? zone.displayName : "浅滩") + " · Lv" + lv + " · " + ids.Length + " 只";
+                    }
+                    if (kind.StartsWith("boss_")) lastEncounterText = "首领遭遇 · Lv" + lv;
+                    if (ids.Length > 0) AddEnemyWave(b0, ids);
+                }
+                else
                 if (kind == "elite")
                 {
                     AddEnemyWave(b0, new[] { PickEnemyId(Quality.Elite), PickEnemyId(Quality.Normal) });

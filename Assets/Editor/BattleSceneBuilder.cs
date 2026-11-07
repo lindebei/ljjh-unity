@@ -179,7 +179,29 @@ public static class BattleSceneBuilder
         EditorBuildSettings.scenes = scenes.ToArray();
     }
 
-        [MenuItem("灵境/生成 SkillScreen 场景")]
+        [MenuItem("灵境/生成 Explore 场景（一境地图）")]
+    public static void BuildExploreScene()
+    {
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+        var camGo = new GameObject("Main Camera", typeof(Camera));
+        var cam = camGo.GetComponent<Camera>();
+        cam.orthographic = true;
+        cam.orthographicSize = 5f;
+        cam.clearFlags = CameraClearFlags.SolidColor;
+        cam.backgroundColor = new Color(0.05f, 0.06f, 0.08f);
+        camGo.transform.position = new Vector3(0f, 0f, -10f);
+
+        var runner = new GameObject("ExploreRunner");
+        runner.AddComponent<LingJing.UI.ExploreScreen>();
+
+        const string path = "Assets/Scenes/Explore.unity";
+        EditorSceneManager.SaveScene(scene, path);
+        AddToBuildSettings(path);
+        Debug.Log("[BattleSceneBuilder] 场景已生成：" + path);
+    }
+
+    [MenuItem("灵境/生成 SkillScreen 场景")]
         public static void BuildSkillScene()
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);

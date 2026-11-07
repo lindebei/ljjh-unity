@@ -14,6 +14,7 @@ namespace LingJing.UI
         public const string EquipScene = "EquipScreen";
         const string RunMapScene = "RunMap";
         public const string SkillScene = "SkillScreen";
+        const string ExploreScene = "Explore";
         public const string BossScene = "BattleBoss";
 
         Font font;
@@ -56,10 +57,11 @@ namespace LingJing.UI
                 new Vector2(0.5f, 1f), new Vector2(1200f, 40f), new Vector2(0.5f, 1f), new Vector2(0f, -305f));
 
             float y = 190f;
-            Btn(canvasRect, "开始战斗（编队 4 选 3）", new Vector2(0f, y), () => Load(BattleScene));
-            Btn(canvasRect, "换装", new Vector2(0f, y - 110f), () => Load(EquipScene));
-            Btn(canvasRect, "技能", new Vector2(0f, y - 220f), () => Load(SkillScene));
-            Btn(canvasRect, "Boss 演示战", new Vector2(0f, y - 330f), () => Load(BossScene));
+            Btn(canvasRect, "一境探索（地图）", new Vector2(0f, y), () => { LingJing.Battle.RunState.Reset(); Load(ExploreScene); });
+            Btn(canvasRect, "单场战斗（编队 4 选 3）", new Vector2(0f, y - 100f), () => Load(BattleScene));
+            Btn(canvasRect, "换装", new Vector2(0f, y - 200f), () => Load(EquipScene));
+            Btn(canvasRect, "技能", new Vector2(0f, y - 300f), () => Load(SkillScene));
+            Btn(canvasRect, "Boss 演示战", new Vector2(0f, y - 400f), () => Load(BossScene));
             Btn(canvasRect, "一境探索", new Vector2(0f, y - 440f), () => { LingJing.Battle.RunState.Reset(); Load(RunMapScene); });
             Btn(canvasRect, "退出游戏", new Vector2(0f, y - 550f), Quit);
 

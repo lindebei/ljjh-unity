@@ -21,6 +21,7 @@ public static class BattleCsvImporter
     const string SetsDir = OutRoot + "/EnemySkillSets";
     const string EquipDir = OutRoot + "/Equipment";
     const string DropsDir = OutRoot + "/Drops";
+    const string ZonesDir = OutRoot + "/Zones";
 
     [MenuItem("灵境/导入战斗数据 (CSV → SO)")]
     public static void ImportAll()
@@ -319,6 +320,43 @@ public static class BattleCsvImporter
 
     // ------------------------------------------------------------------ 基础设施
 
+    [MenuItem("灵境/导入生态区 (zones.csv → SO)")]
+    public static void ImportZonesMenu() { ImportZones(); }
+
+    /// <summary>zones.csv → Resources/BattleData/Zones/*.asset（生态区：遇敌率/等级区间/属性倾向）</summary>
+    public static void ImportZones()
+    {
+        string path = CsvDir + "/zones.csv";
+        if (!System.IO.File.Exists(path)) { Debug.LogError("[BattleCsvImporter] 找不到 " + path); return; }
+        EnsureFolders();
+        int n = 0;
+        foreach (var r in ReadCsv(path))
+        {
+            string id = Get(r, "id");
+            if (string.IsNullOrEmpty(id)) continue;
+            var so = Upsert<LingJing.Data.ZoneDefinition>(ZonesDir, id);
+            so.id = id;
+            so.displayName = Get(r, "name");
+            so.x = GetFloat(r, "x", 0f);
+            so.y = GetFloat(r, "y", 0f);
+            so.w = GetFloat(r, "w", 100f);
+            so.h = GetFloat(r, "h", 100f);
+            so.ratePerMeter = GetFloat(r, "rate", 0.006f);
+            so.minLevel = GetInt(r, "minLv", 1);
+            so.maxLevel = GetInt(r, "maxLv", 24);
+            so.water = GetFloat(r, "water", 25f);
+            so.fire = GetFloat(r, "fire", 25f);
+            so.wind = GetFloat(r, "wind", 25f);
+            so.earth = GetFloat(r, "earth", 25f);
+            so.gateLevel = GetInt(r, "gateLevel", 0);
+            so.note = Get(r, "note");
+            EditorUtility.SetDirty(so);   // 不 SetDirty 的话 SaveAssets 不会把新值写盘，5 个 asset 会都是默认值
+            n++;
+        }
+        AssetDatabase.SaveAssets();
+        Debug.Log("[BattleCsvImporter] 生态区导入完成：" + n + " 个");
+    }
+
     static void EnsureFolders()
     {
         EnsureFolder("Assets", "Resources");
@@ -328,6 +366,7 @@ public static class BattleCsvImporter
         EnsureFolder(OutRoot, "EnemySkillSets");
         EnsureFolder(OutRoot, "Equipment");
         EnsureFolder(OutRoot, "Drops");
+        EnsureFolder(OutRoot, "Zones");
     }
 
     static void EnsureFolder(string parent, string child)

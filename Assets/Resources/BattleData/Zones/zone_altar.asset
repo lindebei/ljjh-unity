@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76bf560b185f2474788b974d31e28601, type: 3}
+  m_Name: zone_altar
+  m_EditorClassIdentifier: Assembly-CSharp::LingJing.Data.ZoneDefinition
+  id: zone_altar
+  displayName: "\u7075\u575B"
+  x: 330
+  y: 330
+  w: 140
+  h: 140
+  ratePerMeter: 0.005
+  minLevel: 20
+  maxLevel: 24
+  water: 25
+  fire: 25
+  wind: 25
+  earth: 25
+  gateLevel: 18
+  note: "\u96FE\u969C\uFF1A\u7B49\u7EA7\u4F4E\u4E8E 18 \u8FDB\u4E0D\u53BB"

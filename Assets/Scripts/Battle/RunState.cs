@@ -17,6 +17,16 @@ namespace LingJing.Battle
         /// <summary>本次进战斗的节点类型：normal / elite / boss / rest</summary>
         public static string PendingNode = "normal";
 
+        /// <summary>待战遭遇的生态区 id（暗雷遇敌时写进来）。</summary>
+        public static string PendingZone = "";
+        /// <summary>待战遭遇的怪物等级。</summary>
+        public static int PendingLevel = 24;
+        /// <summary>队伍等级（三兽统一，一境先按同一级处理）。</summary>
+        public static int PlayerLevel = 24;
+        /// <summary>玩家在地图上的位置（米）。</summary>
+        public static float PosX = 60f;
+        public static float PosY = 60f;
+
         public static void Reset()
         {
             Active = true;
