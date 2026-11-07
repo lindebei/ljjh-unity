@@ -102,9 +102,10 @@ namespace LingJing.UI
             font = Font.CreateDynamicFontFromOSFont(new[] { "Microsoft YaHei", "SimHei", "PingFang SC", "Arial" }, 22);
             BuildUi();
             // v0.1 规则：编队 4 选 3，开战前选、开战后不可更改 —— 所以先出编队面板，由「开战」触发 StartBattle()
-            if (skipFormation)
+            // 一境探索模式：队伍在进战斗前就定了（RunState），不能再弹编队面板
+            if (skipFormation || LingJing.Battle.RunState.Active)
             {
-                PrefillDefaultFormation();
+                if (!LingJing.Battle.RunState.Active) PrefillDefaultFormation();
                 StartBattle();
             }
             else
