@@ -8,7 +8,26 @@ public static class DevLaunch
     [MenuItem("灵境/直接开打（进入 Play）")]
     public static void Run()
     {
-        const string scene = "Assets/Scenes/BattlePrototype.unity";
+        Launch("Assets/Scenes/BattlePrototype.unity");
+    }
+
+    /// <summary>直接进一境地图（游戏真正的开头）。</summary>
+    [MenuItem("灵境/直接进一境地图（进入 Play）")]
+    public static void RunExplore()
+    {
+        LingJing.Battle.RunState.Reset();
+        Launch("Assets/Scenes/Explore.unity");
+    }
+
+    /// <summary>从主菜单进游戏（能点「一境探索」进地图）。</summary>
+    [MenuItem("灵境/从主菜单开打（进入 Play）")]
+    public static void RunMenu()
+    {
+        Launch("Assets/Scenes/MainMenu.unity");
+    }
+
+    static void Launch(string scene)
+    {
         if (System.IO.File.Exists(scene)) EditorSceneManager.OpenScene(scene);
         EditorApplication.delayCall += () =>
         {

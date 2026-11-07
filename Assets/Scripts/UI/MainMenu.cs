@@ -56,14 +56,14 @@ namespace LingJing.UI
             Text(canvasRect, "SubTitle", "v0.1 · 战斗手感验证版", 28, new Color(0.72f, 0.78f, 0.88f), TextAnchor.MiddleCenter,
                 new Vector2(0.5f, 1f), new Vector2(1200f, 40f), new Vector2(0.5f, 1f), new Vector2(0f, -305f));
 
-            float y = 190f;
+            // 6 个入口，间距 95：原来的 7 个（含旧的节点式 RunMap）会互相压住，且第一颗压到标题
+            float y = 140f;
             Btn(canvasRect, "一境探索（地图）", new Vector2(0f, y), () => { LingJing.Battle.RunState.Reset(); Load(ExploreScene); });
-            Btn(canvasRect, "单场战斗（编队 4 选 3）", new Vector2(0f, y - 100f), () => Load(BattleScene));
-            Btn(canvasRect, "换装", new Vector2(0f, y - 200f), () => Load(EquipScene));
-            Btn(canvasRect, "技能", new Vector2(0f, y - 300f), () => Load(SkillScene));
-            Btn(canvasRect, "Boss 演示战", new Vector2(0f, y - 400f), () => Load(BossScene));
-            Btn(canvasRect, "一境探索", new Vector2(0f, y - 440f), () => { LingJing.Battle.RunState.Reset(); Load(RunMapScene); });
-            Btn(canvasRect, "退出游戏", new Vector2(0f, y - 550f), Quit);
+            Btn(canvasRect, "单场战斗（编队 4 选 3）", new Vector2(0f, y - 95f), () => Load(BattleScene));
+            Btn(canvasRect, "换装", new Vector2(0f, y - 190f), () => Load(EquipScene));
+            Btn(canvasRect, "技能", new Vector2(0f, y - 285f), () => Load(SkillScene));
+            Btn(canvasRect, "Boss 演示战", new Vector2(0f, y - 380f), () => Load(BossScene));
+            Btn(canvasRect, "退出游戏", new Vector2(0f, y - 475f), Quit);
 
             Text(canvasRect, "Hint", "点「开始战斗」后先选 3 只兽，开战后编队不可更改", 22,
                 new Color(0.6f, 0.66f, 0.76f), TextAnchor.MiddleCenter,
